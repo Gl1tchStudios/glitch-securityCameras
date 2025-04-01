@@ -1,4 +1,4 @@
-# Luma Security Camera System [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+# Glitch Security Camera System [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 A comprehensive security camera system for your FiveM server. This resource allows players to access, control, and interact with security cameras throughout your server, making it perfect for heist scenarios, security jobs, and more.
 
@@ -17,9 +17,9 @@ A comprehensive security camera system for your FiveM server. This resource allo
 ## 📷 Media
 
 ### **Preview Image**
-![Luma Security Camera System](https://kappa.lol/rFcose)
+![Glitch Security Camera System](https://kappa.lol/rFcose)
 - Example of Camera System UI
-![Luma Security Camera System with Debug](https://kappa.lol/z6RqYU)
+![Glitch Security Camera System with Debug](https://kappa.lol/z6RqYU)
 -  Camera System with Debug Enabled
 ### **Feature Demonstration**
 ![Camera System in Action](Incomplete)
@@ -29,8 +29,8 @@ A comprehensive security camera system for your FiveM server. This resource allo
 ## 🔧 Installation
 
 1. **Download** the latest release from GitHub.  
-2. **Extract** the `luma-securityCamera` folder to your server's `resources` directory.  
-3. **Add** `ensure luma-securityCamera` to your `server.cfg`.  
+2. **Extract** the `glitch-securityCamera` folder to your server's `resources` directory.  
+3. **Add** `ensure glitch-securityCamera` to your `server.cfg`.  
 4. **Configure** cameras in the `config.lua` file.  
 5. **Restart** your server.  
 
@@ -71,11 +71,11 @@ config.Cameras = {
                     incorrectBlocks = 10
                 },
                 useClientEvent = true,                                              -- Use client event for hack
-                onSuccessEvent = "luma-casinoHeist:client:vaultHackSuccess",        -- Event triggered on success
-                onFailEvent = "luma-casinoHeist:client:vaultHackFail",              -- Event triggered on failure
+                onSuccessEvent = "glitch-casinoHeist:client:vaultHackSuccess",        -- Event triggered on success
+                onFailEvent = "glitch-casinoHeist:client:vaultHackFail",              -- Event triggered on failure
                 useSeverEvent = false,                                              -- Use server event for hack
-                onSuccessServerEvent = "luma-heists:server:vaultHackSuccess",       -- Server event triggered on success
-                onFailServerEvent = "luma-heists:server:vaultHackFail"              -- Server event triggered on failure
+                onSuccessServerEvent = "glitch-heists:server:vaultHackSuccess",       -- Server event triggered on success
+                onFailServerEvent = "glitch-heists:server:vaultHackFail"              -- Server event triggered on failure
             }
         }
     },
@@ -100,9 +100,9 @@ config.Cameras = {
 ### **Basic Implementation**
 #### **Triggering Camera Access from Items**
 ``` lua
-RegisterNetEvent('luma-securityCamera:openCamera')
-AddEventHandler('luma-securityCamera:openCamera', function(cameraIndex)
-    exports['luma-securityCamera']:EnterCameraMode(cameraIndex)
+RegisterNetEvent('glitch-securityCamera:openCamera')
+AddEventHandler('glitch-securityCamera:openCamera', function(cameraIndex)
+    exports['glitch-securityCamera']:EnterCameraMode(cameraIndex)
 end)
 ```
 
@@ -131,14 +131,14 @@ IsHacked(cameraId, propId) -- Check if a camera has been hacked
 
 ## 🔄 Integration Examples
 
-- **Integration with any of your minigame scripts like `luma-minigames`, `ps-ui`...**  
+- **Integration with any of your minigame scripts like `glitch-minigames`, `ps-ui`...**  
 - **Integration with your targeting system e.g. `ox-target`, `qb-target`...**  
 
 ---
 
 ## 📜 Credits
 
-- **Developed by** Luma  
+- **Developed by** Glitch  
 - **Special thanks** to the FiveM community for support and inspiration  
 
 ---
