@@ -1,0 +1,530 @@
+/*  
+-- Luma Security Camera System
+-- Copyright (C) 2024 Luma
+-- 
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+-- 
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+-- GNU General Public License for more details.
+-- 
+-- You should have received a copy of the GNU General Public License
+-- along with this program. If not, see <https://www.gnu.org/licenses/>. */
+
+/* Camera Interface */
+:root {
+    --primary-color: rgba(0, 162, 255, 0.8);
+    --accent-color: rgba(255, 255, 255, 0.8);
+    --background: rgba(0, 0, 0, 0.4);
+    --text-color: rgba(255, 255, 255, 0.85);
+    --border-radius: 3px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    color: var(--text-color);
+    letter-spacing: 0.5px;
+    background-color: transparent !important;
+}
+
+.camera-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: transparent;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    display: none;
+}
+
+.camera-container.visible {
+    opacity: 1;
+}
+
+/* Camera Overlay Effects */
+.camera-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.scan-lines {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        rgba(0, 0, 0, 0.02) 50%
+    );
+    background-size: 100% 4px;
+    opacity: 0.15;
+}
+
+.camera-vignette {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+/* Camera Reticle */
+.camera-reticle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    z-index: 2;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.reticle-crosshair {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.reticle-crosshair::before,
+.reticle-crosshair::after {
+    content: '';
+    position: absolute;
+    background-color: var(--primary-color);
+}
+
+.reticle-crosshair::before {
+    width: 1px;
+    height: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.reticle-crosshair::after {
+    width: 100%;
+    height: 1px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Camera Info Displays */
+.camera-header {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    z-index: 3;
+    font-size: 14px;
+}
+
+.camera-info {
+    background-color: var(--background);
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.camera-label {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+#cameraId {
+    font-weight: 500;
+    color: var(--primary-color);
+}
+
+.recording-indicator {
+    display: inline-block;
+    color: #ff3b30;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 10px;
+    animation: blink 1.5s infinite;
+}
+
+.date-time {
+    background-color: var(--background);
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+#timestamp {
+    font-weight: 400;
+}
+
+#date {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* Camera Stats */
+.camera-stats {
+    position: absolute;
+    top: 78px;
+    right: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    z-index: 3;
+}
+
+.stat-item, .camera-stats .stat-item, .camera-details-left .stat-item {
+    background-color: var(--background);
+    padding: 4px 8px;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    opacity: 0.8;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+}
+
+/* Interaction Prompt */
+.interaction-prompt {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--background);
+    padding: 8px 16px;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 1px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 4;
+}
+
+.interaction-prompt.active {
+    opacity: 1;
+}
+
+/* Notification Area */
+.notification {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--background);
+    padding: 12px 20px;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    font-weight: 400;
+    opacity: 0;
+    transition: opacity 0.3s;
+    text-align: center;
+    border-left: 3px solid var(--primary-color);
+    z-index: 5;
+}
+
+.notification.active {
+    opacity: 1;
+}
+
+/* Controls Info */
+.camera-footer {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    justify-content: center;
+    z-index: 3;
+}
+
+.controls-info {
+    background-color: var(--background);
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    opacity: 0.7;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+kbd {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    padding: 0 4px;
+    margin: 0 2px;
+    font-family: inherit;
+    font-size: 11px;
+}
+
+/* Hacking Interface */
+#hacking-interface {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s;
+}
+
+.hack-progress {
+    width: 300px;
+    height: 6px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.hack-bar {
+    height: 100%;
+    width: 0%;
+    background-color: var(--primary-color);
+    transition: width 0.1s;
+}
+
+.hack-status {
+    font-size: 16px;
+    margin-bottom: 30px;
+    letter-spacing: 1px;
+}
+
+.hack-result {
+    font-size: 24px;
+    font-weight: 500;
+    color: #2ecc71;
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+#hacking-interface.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Identification System - Partically unused due to removed in-built hack*/
+#targeting-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120px;
+    height: 120px;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+#targeting-indicator.active {
+    opacity: 1;
+}
+
+.scan-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80px;
+    height: 80px;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.9;
+    animation: scan-pulse 2s infinite, scan-rotate 8s linear infinite;
+}
+
+.scan-ring::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border: 1px dashed rgba(0, 162, 255, 0.7);
+    border-radius: 50%;
+}
+
+.scan-ring::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50%;
+    height: 2px;
+    background: linear-gradient(to right, rgba(0, 162, 255, 1), transparent);
+    transform-origin: left;
+    animation: scan-line-rotate 2s linear infinite;
+}
+
+.targeting-corner {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border-color: var(--primary-color);
+    border-style: solid;
+    border-width: 0;
+    opacity: 0;
+    animation: corner-appear 0.5s forwards 0.3s;
+}
+
+.corner-top-left {
+    top: 0;
+    left: 0;
+    border-top-width: 2px;
+    border-left-width: 2px;
+}
+
+.corner-top-right {
+    top: 0;
+    right: 0;
+    border-top-width: 2px;
+    border-right-width: 2px;
+}
+
+.corner-bottom-left {
+    bottom: 0;
+    left: 0;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+}
+
+.corner-bottom-right {
+    bottom: 0;
+    right: 0;
+    border-bottom-width: 2px;
+    border-right-width: 2px;
+}
+
+.target-text {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--primary-color);
+    white-space: nowrap;
+    opacity: 0;
+    font-weight: 500;
+    text-shadow: 0 0 5px rgba(0, 162, 255, 0.5);
+    animation: text-fade 1s forwards 0.6s;
+}
+
+/* Targeting Animations */
+@keyframes scan-pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.9; }
+    50% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes scan-rotate {
+    0% { transform: translate(-50%, -50%) scale(0.8) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) scale(0.8) rotate(360deg); }
+}
+
+@keyframes scan-line-rotate {
+    0% { transform: translateY(-50%) rotate(0deg); }
+    100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+@keyframes corner-appear {
+    0% { opacity: 0; width: 0; height: 0; }
+    100% { opacity: 1; width: 15px; height: 15px; }
+}
+
+@keyframes text-fade {
+    0% { opacity: 0; transform: translateX(-50%) translateY(5px); }
+    100% { opacity: 0.8; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* View Mode Indicator */
+.view-mode-indicator {
+    position: absolute;
+    bottom: 50px;
+    right: 10px;
+    color: white;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 8px;
+    border-radius: 3px;
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.view-mode-indicator.mode-normal {
+    border-left: 3px solid #3498db;
+}
+
+.view-mode-indicator.mode-thermal {
+    border-left: 3px solid #e74c3c;
+    color: #ff6b6b;
+}
+
+.view-mode-indicator.mode-nightvision {
+    border-left: 3px solid #2ecc71;
+    color: #7fff7f;
+}
+
+.camera-details {
+    display: none;
+}
+
+/* Left-side Camera Details*/
+.camera-details-left {
+    position: absolute;
+    top: 60px;
+    left: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: 3;
+}
+
+.camera-details-left .stat-item {
+    background-color: var(--background);
+    padding: 4px 8px;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    opacity: 0.8;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+}

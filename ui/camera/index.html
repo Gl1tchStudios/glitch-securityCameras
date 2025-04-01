@@ -1,0 +1,140 @@
+<!-- 
+-- Luma Security Camera System
+-- Copyright (C) 2024 Luma
+-- 
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+-- 
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+-- GNU General Public License for more details.
+-- 
+-- You should have received a copy of the GNU General Public License
+-- along with this program. If not, see <https://www.gnu.org/licenses/>. -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Camera System</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .marker-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .x-marker {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+        
+        .x-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background-color: rgba(255, 255, 255, 0.8);
+            top: 50%;
+            left: 0;
+            transform-origin: center;
+            border-radius: 1px;
+            box-shadow: 0 0 5px rgba(0, 162, 255, 0.5);
+        }
+        
+        .x-line-1 {
+            transform: translateY(-50%) rotate(45deg);
+        }
+        
+        .x-line-2 {
+            transform: translateY(-50%) rotate(-45deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="camera-container" id="cameraSystem">
+        <div class="camera-overlay">
+            <div class="scan-lines"></div>
+            <div class="camera-vignette"></div>
+        </div>
+        
+        <div class="camera-reticle">
+            <div class="reticle-crosshair"></div>
+        </div>
+        
+        <div class="camera-header">
+            <div class="camera-info">
+                <div class="camera-label">CAMERA:</div>
+                <div id="cameraId">CAM-001</div>
+                <div class="recording-indicator">● REC</div>
+            </div>
+            <div class="date-time">
+                <div id="timestamp">00:00:00</div>
+                <div id="date">01/01/2023</div>
+            </div>
+        </div>
+        
+        <div class="camera-details-left">
+            <div class="stat-item" id="camera-name">SEC-ENTRANCE-01</div>
+            <div class="stat-item" id="camera-location">DIAMOND CASINO RESORT</div>
+            <div class="stat-item" id="camera-mode">MODE: NORMAL</div>
+        </div>
+        
+        <div class="camera-stats">
+            <div class="stat-item">FPS: 30</div>
+            <div class="stat-item">RES: 1080p</div>
+            <div class="stat-item">SIGNAL: 96%</div>
+        </div>
+        
+        <div class="interaction-prompt" id="interactionPrompt">
+            <span id="interactionText">PRESS E TO HACK</span>
+        </div>
+        
+        <div class="notification" id="notification">
+            <span id="notificationText"></span>
+        </div>
+        
+        <div class="camera-footer">
+            <div class="controls-info">
+                <span><kbd>←</kbd><kbd>→</kbd> SWITCH CAMERA</span>
+                <span><kbd>MOUSE</kbd> PAN</span>
+                <span><kbd>Q</kbd> SWITCH VIEW MODE</span>
+                <span id="interactControl"><kbd>E</kbd> INTERACT</span>
+                <span><kbd>ESC</kbd> EXIT</span>
+            </div>
+        </div>
+
+        <div id="hacking-interface">
+            <div class="hack-progress">
+                <div class="hack-bar"></div>
+            </div>
+            <div class="hack-status">CONNECTING...</div>
+            <div class="hack-result">ACCESS GRANTED</div>
+        </div>
+    </div>
+
+    <div id="markerContainer" class="marker-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
