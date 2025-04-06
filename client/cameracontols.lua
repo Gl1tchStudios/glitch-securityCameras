@@ -14,13 +14,16 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+local hackListenerEvent = nil
+local inCameraMode = false
+local completedHacks = {}
+
 inCameraMode = false
 
 local currentCameraIndex = 1
 local currentCamera = nil
 local playerOriginalPosition = nil
 local interactablePropInView = nil
-local completedHacks = {}
 local currentViewMode = "normal"
 
 local controls = {
@@ -37,13 +40,48 @@ local controls = {
 --  CORE CAMERA FUNCTIONALITY
 -- ============================
 
+-- Modify the EnterCameraMode function to return a Promise-like functionality
 function EnterCameraMode(cameraIndex)
-    if inCameraMode then return end
+    if inCameraMode then 
+        return Citizen.Await(promise.resolve(false)) 
+    end
     
+    local p = promise.new()
+    
+    -- Validate camera index first
+    if not config.Cameras or not config.Cameras[cameraIndex] then 
+        print("^1Invalid camera index or camera config^7")
+        return Citizen.Await(promise.resolve(false))
+    end
+    
+    -- Setup hack completion handler
+    local hackListener = AddEventHandler('luma-securityCameras:client:hackCompleted', function(success, hackPropId)
+        RemoveEventHandler(hackListener)
+        p:resolve(success)
+        
+        if inCameraMode then
+            ExitCameraMode()
+        end
+    end)
+    
+    -- Set timeout
+    SetTimeout(60000, function()
+        if not p:isDone() then
+            RemoveEventHandler(hackListener)
+            p:resolve(false)
+            
+            if inCameraMode then
+                ExitCameraMode() 
+            end
+        end
+    end)
+    
+    -- Start camera mode
     cameraIndex = cameraIndex or 1
     if not config.Cameras or not config.Cameras[cameraIndex] then 
         print("^1Invalid camera index or camera config^7")
-        return 
+        p:resolve(false)
+        return Citizen.Await(p)
     end
     
     exports['luma-securityCameras']:SetHighlightActive(false)
@@ -117,6 +155,8 @@ function EnterCameraMode(cameraIndex)
     })
     
     print("^2Camera mode activated: Camera " .. currentCameraIndex .. "^7")
+    
+    return Citizen.Await(p)
 end
 
 function ExitCameraMode()
@@ -505,14 +545,11 @@ function TriggerHackMinigame(prop)
     
     local function handleSuccess()
         if hackCompleted then return end
-
         hackCompleted = true
         
-        -- if prop.hackStage == "unlockStairsDoorOfficeLevel" then
-        --     TriggerServerEvent('luma-casinoHeist:server:setdoor', 8, 0)
-        -- end
-
         completedHacks[prop.id] = true
+        
+        TriggerEvent('luma-securityCameras:client:hackCompleted', true, prop.id)
         
         exports['luma-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 0, g = 0, b = 255, a = 100})
         
@@ -550,6 +587,8 @@ function TriggerHackMinigame(prop)
     local function handleFailure()
         if hackCompleted then return end
         hackCompleted = true
+        
+        TriggerEvent('luma-securityCameras:client:hackCompleted', false, prop.id)
         
         SendNUIMessage({
             type = 'showNotification',
@@ -612,7 +651,7 @@ function TriggerHackMinigame(prop)
             end
         end)
     
-    -- Luma Casino Heist method for hack
+    -- Glitch Casino Heist method for hack
     else
         local hackType = prop.hackType or "default"
         local hackStage = prop.hackStage or 1
@@ -622,7 +661,6 @@ function TriggerHackMinigame(prop)
             print("^2Using default hack system: " .. hackType .. " (Stage: " .. tostring(hackStage) .. ")^7")
         end
         
-        -- Pass parameters to PerformHack
         PerformHack(hackType, hackStage, function(success)
             if config.TestingMode then
                 print("^3Hack result received: " .. (success and "SUCCESS" or "FAILURE") .. "^7")
@@ -639,8 +677,10 @@ function TriggerHackMinigame(prop)
     interactablePropInView = nil
 end
 
--- Helper function to split strings
+-- Fix 1: Correct string.split implementation
 string.split = function(str, delimiter)
+    if not str or str == "" then return {} end
+    
     local result = {}
     local from = 1
     local delim_from, delim_to = string.find(str, delimiter, from)
@@ -651,7 +691,10 @@ string.split = function(str, delimiter)
         delim_from, delim_to = string.find(str, delimiter, from)
     end
     
-    table.insert(result, string.sub(str, from))
+    if from <= string.len(str) then
+        table.insert(result, string.sub(str, from))
+    end
+    
     return result
 end
 
@@ -754,3 +797,46 @@ function SetCameraViewMode(mode)
         SetNightvision(true)
     end
 end
+
+local hackResult = nil
+local waitingForResult = false
+
+function AttemptCameraHack(cameraIndex, propId)
+    local p = promise.new()
+    
+    if not cameraIndex or not propId then
+        return false
+    end
+    
+    if not config.Cameras or not config.Cameras[cameraIndex] then
+        return false
+    end
+    
+    local hackListener = AddEventHandler('luma-securityCameras:client:hackCompleted', function(success, hackPropId)
+        if hackPropId == propId then
+            RemoveEventHandler(hackListener)
+            p:resolve(success)
+            
+            if inCameraMode then
+                ExitCameraMode()
+            end
+        end
+    end)
+    
+    EnterCameraMode(cameraIndex)
+    
+    SetTimeout(60000, function()
+        if not p:isDone() then
+            RemoveEventHandler(hackListener)
+            p:resolve(false)
+            
+            if inCameraMode then
+                ExitCameraMode()
+            end
+        end
+    end)
+    
+    return Citizen.Await(p)
+end
+
+exports('AttemptCameraHack', AttemptCameraHack)

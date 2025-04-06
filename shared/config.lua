@@ -13,7 +13,7 @@ config.Cameras = {
             z = {min = 89, max = 175.0}                             -- Horizontal limits
         },
         interactiveProps = {
-            -- Example using default luma-casinoHeist system **DO NOT USE THIS**
+            -- Example using default glitch-casinoHeist system **DO NOT USE THIS**
             {
                 id = "security_mainframe",                          -- Unique ID for the prop
                 position = vector3(2509.0986, -260.3841, -54.0064), -- Prop position
@@ -25,10 +25,6 @@ config.Cameras = {
                 
                 hackType = "bd-Chopping",                           -- Type of hack (e.g., bd-Chopping, thermite, memory)
                 hackStage = 'unlockStairsDoorOfficeLevel',          -- Stage of the hack
-                useClientEvent = true,                                               -- Use client event for hack
-                onSuccessEvent = "luma-casinoHeist:client:unlockStairsDoorSuccess",  -- Event triggered on success
-                onFailEvent = "luma-casinoHeist:client:unlockStairsDoorFail",        -- Event triggered on failure
-                useSeverEvent = false,                                               -- Use server event for hack
             }
         }
     },
@@ -39,7 +35,7 @@ config.Cameras = {
         rotation = vector3(-15.0, 0.0, 80.0),                      -- Camera rotation
         interactiveProps = {
             {
-                -- Example using a specific export
+                -- Example using an export for the minigame
                 id = "vault_panel",                                 -- Unique ID for the prop
                 position = vector3(918.593, 52.019, 110.709),       -- Prop position
                 hash = 1878378076,                                  -- Hash of the prop model
@@ -54,12 +50,6 @@ config.Cameras = {
                     gridSize = 6,
                     incorrectBlocks = 10
                 },
-                useClientEvent = true,                                              -- Use client event for hack
-                onSuccessEvent = "luma-casinoHeist:client:vaultHackSuccess",        -- Event triggered on success
-                onFailEvent = "luma-casinoHeist:client:vaultHackFail",              -- Event triggered on failure
-                useSeverEvent = false,                                              -- Use server event for hack
-                onSuccessServerEvent = "luma-heists:server:vaultHackSuccess",       -- Server event triggered on success
-                onFailServerEvent = "luma-heists:server:vaultHackFail"              -- Server event triggered on failure
             }
         }
     },
@@ -70,7 +60,7 @@ config.Cameras = {
         rotation = vector3(-5.0, 0.0, 170.0),                      -- Camera rotation
         interactiveProps = {
             {
-                -- Example using an event with callback
+                -- Example using an event for the minigame
                 id = "staff_computer",                              -- Unique ID for the prop
                 position = vector3(2535.16, -266.65, 70.54),        -- Prop position
                 hash = `xm_prop_x17_laptop_mrk2_01a`,               -- Hash of the prop model
@@ -85,12 +75,6 @@ config.Cameras = {
                     gridSize = 4,
                     timeout = 30
                 },
-                useClientEvent = true,                                              -- Use client event for hack
-                onSuccessEvent = "luma-casinoHeist:client:staffDataSuccess",        -- Event triggered on success
-                onFailEvent = "luma-casinoHeist:client:staffDataFail",              -- Event triggered on failure
-                useSeverEvent = false,                                              -- Use server event for hack
-                onSuccessServerEvent = "luma-heists:server:vaultHackSuccess",       -- Server event triggered on success
-                onFailServerEvent = "luma-heists:server:vaultHackFail"              -- Server event triggered on failure
             }
         }
     },

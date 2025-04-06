@@ -17,10 +17,10 @@ A comprehensive security camera system for your FiveM server. This resource allo
 ## 📷 Media
 
 ### **Preview Image**
+Example of Camera System UI
 ![Glitch Security Camera System](https://kappa.lol/rFcose)
-- Example of Camera System UI
+Camera System with Debug Enabled
 ![Glitch Security Camera System with Debug](https://kappa.lol/z6RqYU)
--  Camera System with Debug Enabled
 ### **Feature Demonstration**
 ![Camera System in Action](Incomplete)
 
@@ -64,18 +64,12 @@ config.Cameras = {
                 failText = "Security breach detected",              -- Text displayed on failure
                 highlightColor = {r = 255, g = 165, b = 0, a = 200},-- Color of the highlight
 
-                hackExport = "ps-ui:Thermite",                      -- Export to call for hack minigame
+                hackExport = "glitch-minigames:StartSurgeOverride", -- Export to call for hack minigame
                 hackParams = {                                      -- Parameters for the hack minigame
-                    time = 60,
-                    gridSize = 6,
-                    incorrectBlocks = 10
+                    possibleKeys = {'E'},
+                    requiredPresses = 50,
+                    decayRate = 2
                 },
-                useClientEvent = true,                                              -- Use client event for hack
-                onSuccessEvent = "glitch-casinoHeist:client:vaultHackSuccess",        -- Event triggered on success
-                onFailEvent = "glitch-casinoHeist:client:vaultHackFail",              -- Event triggered on failure
-                useSeverEvent = false,                                              -- Use server event for hack
-                onSuccessServerEvent = "glitch-heists:server:vaultHackSuccess",       -- Server event triggered on success
-                onFailServerEvent = "glitch-heists:server:vaultHackFail"              -- Server event triggered on failure
             }
         }
     },
@@ -100,10 +94,12 @@ config.Cameras = {
 ### **Basic Implementation**
 #### **Triggering Camera Access from Items**
 ``` lua
-RegisterNetEvent('glitch-securityCamera:openCamera')
-AddEventHandler('glitch-securityCamera:openCamera', function(cameraIndex)
-    exports['glitch-securityCamera']:EnterCameraMode(cameraIndex)
-end)
+local success = exports['glitch-securityCameras']:AttemptCameraHack(1, "security_mainframe")
+if success then
+    print("Hack completed successfully!")
+else
+    print("Hack failed or timed out!")
+end
 ```
 
 ---
@@ -138,7 +134,7 @@ IsHacked(cameraId, propId) -- Check if a camera has been hacked
 
 ## 📜 Credits
 
-- **Developed by** Glitch  
+- **Developed by** Luma in collaboration with Glitch Studios  
 - **Special thanks** to the FiveM community for support and inspiration  
 
 ---
