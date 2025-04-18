@@ -1,5 +1,5 @@
--- Luma Security Camera System
--- Copyright (C) 2024 Luma
+-- Glitch Security Camera System
+-- Copyright (C) 2024 Glitch
 -- 
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -116,25 +116,25 @@ function HideCameraHUD()
     })
 end
 
-RegisterNetEvent('luma-securityCameras:client:cameraHacked', function(cameraId, propId)
+RegisterNetEvent('glitch-securityCameras:client:cameraHacked', function(cameraId, propId)
     if activeCamera and activeCamera.id == cameraId then
         ShowCameraNotification("Camera system compromised", "success")
     end
 end)
 
-RegisterNetEvent('luma-securityCameras:client:cameraAlreadyHacked', function(cameraId, propId)
+RegisterNetEvent('glitch-securityCameras:client:cameraAlreadyHacked', function(cameraId, propId)
     if activeCamera and activeCamera.id == cameraId then
         ShowCameraNotification("System already compromised", "info")
     end
 end)
 
-RegisterNetEvent('luma-securityCameras:client:cameraReset', function(cameraId, propId)
+RegisterNetEvent('glitch-securityCameras:client:cameraReset', function(cameraId, propId)
     if activeCamera and activeCamera.id == cameraId then
         ShowCameraNotification("Security system reset", "warning")
     end
 end)
 
-RegisterNetEvent('luma-securityCameras:client:cameraCooldown', function(cameraId, remainingTime)
+RegisterNetEvent('glitch-securityCameras:client:cameraCooldown', function(cameraId, remainingTime)
     if activeCamera and activeCamera.id == cameraId then
         ShowCameraNotification("System locked: " .. remainingTime .. "s remaining", "error")
     end

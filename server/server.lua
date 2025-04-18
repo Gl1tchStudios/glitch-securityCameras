@@ -1,5 +1,5 @@
--- Luma Security Camera System
--- Copyright (C) 2024 Luma
+-- Glitch Security Camera System
+-- Copyright (C) 2024 Glitch
 -- 
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ AddEventHandler('onResourceStart', function(resourceName)
     cameraCooldowns = {}
 end)
 
-RegisterNetEvent('luma-securityCameras:server:registerCameraHack', function(cameraId, propId)
+RegisterNetEvent('glitch-securityCameras:server:registerCameraHack', function(cameraId, propId)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
     
@@ -41,34 +41,34 @@ RegisterNetEvent('luma-securityCameras:server:registerCameraHack', function(came
             hackedBy = Player.PlayerData.citizenid
         }
         
-        TriggerClientEvent('luma-securityCameras:client:cameraHacked', -1, cameraId, propId)
+        TriggerClientEvent('glitch-securityCameras:client:cameraHacked', -1, cameraId, propId)
         
         print(string.format("Camera %s hacked by %s (%s)", cameraKey, Player.PlayerData.charinfo.firstname, Player.PlayerData.citizenid))
     end
 end)
 
-RegisterNetEvent('luma-securityCameras:server:checkCameraStatus', function(cameraId, propId)
+RegisterNetEvent('glitch-securityCameras:server:checkCameraStatus', function(cameraId, propId)
     local src = source
     local cameraKey = cameraId .. "-" .. propId
     
     if hackedCameras[cameraKey] then
-        TriggerClientEvent('luma-securityCameras:client:cameraAlreadyHacked', src, cameraId, propId)
+        TriggerClientEvent('glitch-securityCameras:client:cameraAlreadyHacked', src, cameraId, propId)
     end
 end)
 
-RegisterNetEvent('luma-securityCameras:server:setCameraCooldown', function(cameraId)
+RegisterNetEvent('glitch-securityCameras:server:setCameraCooldown', function(cameraId)
     local src = source
     cameraCooldowns[cameraId] = os.time() + 60
 end)
 
-RegisterNetEvent('luma-securityCameras:server:checkCameraCooldown', function(cameraId)
+RegisterNetEvent('glitch-securityCameras:server:checkCameraCooldown', function(cameraId)
     local src = source
     
     if cameraCooldowns[cameraId] and cameraCooldowns[cameraId] > os.time() then
         local remainingTime = cameraCooldowns[cameraId] - os.time()
-        TriggerClientEvent('luma-securityCameras:client:cameraCooldown', src, cameraId, remainingTime)
+        TriggerClientEvent('glitch-securityCameras:client:cameraCooldown', src, cameraId, remainingTime)
     else
-        TriggerClientEvent('luma-securityCameras:client:cameraAvailable', src, cameraId)
+        TriggerClientEvent('glitch-securityCameras:client:cameraAvailable', src, cameraId)
     end
 end)
 

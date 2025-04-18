@@ -96,9 +96,11 @@ config.Cameras = {
 ``` lua
 local success = exports['glitch-securityCameras']:AttemptCameraHack(1, "security_mainframe")
 if success then
-    print("Hack completed successfully!")
+    print("Hack success!")
+elseif not success then
+    print("Hack failed!")
 else
-    print("Hack failed or timed out!")
+    print("No hack attempted!")
 end
 ```
 

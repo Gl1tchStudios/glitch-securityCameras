@@ -1,5 +1,5 @@
--- Luma Security Camera System
--- Copyright (C) 2024 Luma
+-- Glitch Security Camera System
+-- Copyright (C) 2024 Glitch
 -- 
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 local hackListenerEvent = nil
 local inCameraMode = false
 local completedHacks = {}
+local allowedCameraIds = {}
 
 inCameraMode = false
 
@@ -33,20 +34,22 @@ local controls = {
     right = 175, -- Arrow Right
     exit = 194,  -- ESC
     interact = 38, -- E
-    viewMode = 86 -- V
+    viewMode = 44 -- Q
 }
 
 -- ============================
 --  CORE CAMERA FUNCTIONALITY
 -- ============================
 
--- Modify the EnterCameraMode function to return a Promise-like functionality
-function EnterCameraMode(cameraIndex)
+function EnterCameraMode(cameraIndex, allowed)
     if inCameraMode then 
         return Citizen.Await(promise.resolve(false)) 
     end
     
     local p = promise.new()
+    
+    -- Store allowed camera IDs
+    allowedCameraIds = allowed or {}
     
     -- Validate camera index first
     if not config.Cameras or not config.Cameras[cameraIndex] then 
@@ -54,9 +57,27 @@ function EnterCameraMode(cameraIndex)
         return Citizen.Await(promise.resolve(false))
     end
     
-    -- Setup hack completion handler
-    local hackListener = AddEventHandler('luma-securityCameras:client:hackCompleted', function(success, hackPropId)
-        RemoveEventHandler(hackListener)
+    -- check if this camera is allowed
+    if #allowedCameraIds > 0 then
+        local currentCamId = config.Cameras[cameraIndex].id
+        local isAllowed = false
+        
+        for _, allowedId in ipairs(allowedCameraIds) do
+            if allowedId == currentCamId then
+                isAllowed = true
+                break
+            end
+        end
+        
+        if not isAllowed then
+            print("^1Camera not in allowed list^7")
+            return Citizen.Await(promise.resolve(false))
+        end
+    end
+    
+    -- setup hack completion handler
+    hackListenerEvent = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
+        RemoveEventHandler(hackListenerEvent)
         p:resolve(success)
         
         if inCameraMode then
@@ -64,10 +85,15 @@ function EnterCameraMode(cameraIndex)
         end
     end)
     
-    -- Set timeout
+    -- set timeout
+    local promiseResolved = false
+    p:next(function()
+        promiseResolved = true
+    end)
+    
     SetTimeout(60000, function()
-        if not p:isDone() then
-            RemoveEventHandler(hackListener)
+        if not promiseResolved then
+            RemoveEventHandler(hackListenerEvent)
             p:resolve(false)
             
             if inCameraMode then
@@ -76,7 +102,7 @@ function EnterCameraMode(cameraIndex)
         end
     end)
     
-    -- Start camera mode
+    -- start camera mode
     cameraIndex = cameraIndex or 1
     if not config.Cameras or not config.Cameras[cameraIndex] then 
         print("^1Invalid camera index or camera config^7")
@@ -84,8 +110,8 @@ function EnterCameraMode(cameraIndex)
         return Citizen.Await(p)
     end
     
-    exports['luma-securityCameras']:SetHighlightActive(false)
-    exports['luma-securityCameras']:ClearAllHighlights()
+    exports['glitch-securityCameras']:SetHighlightActive(false)
+    exports['glitch-securityCameras']:ClearAllHighlights()
     
     DoScreenFadeOut(500)
     Citizen.Wait(500)
@@ -118,7 +144,7 @@ function EnterCameraMode(cameraIndex)
     SetCamActive(currentCamera, true)
     RenderScriptCams(true, false, 0, true, false)
     
-    exports['luma-securityCameras']:SetHighlightActive(true)
+    exports['glitch-securityCameras']:SetHighlightActive(true)
     
     DoScreenFadeIn(500)
     
@@ -162,6 +188,11 @@ end
 function ExitCameraMode()
     if not inCameraMode then return end
     
+    if hackListenerEvent then
+        RemoveEventHandler(hackListenerEvent)
+        hackListenerEvent = nil
+    end
+    
     DoScreenFadeOut(500)
     Citizen.Wait(500)
     
@@ -182,8 +213,8 @@ function ExitCameraMode()
     FreezeEntityPosition(playerPed, false)
     DisplayRadar(true)
     
-    exports['luma-securityCameras']:SetHighlightActive(false)
-    exports['luma-securityCameras']:ClearAllHighlights()
+    exports['glitch-securityCameras']:SetHighlightActive(false)
+    exports['glitch-securityCameras']:ClearAllHighlights()
     
     SendNUIMessage({
         type = 'hideCameraUI'
@@ -205,7 +236,32 @@ end
 function SwitchCamera(cameraIndex)
     if not inCameraMode or not config.Cameras[cameraIndex] then return end
     
-    exports['luma-securityCameras']:ClearAllHighlights()
+    -- check if this camera is allowed
+    if #allowedCameraIds > 0 then
+        local targetCamId = config.Cameras[cameraIndex].id
+        local isAllowed = false
+        
+        for _, allowedId in ipairs(allowedCameraIds) do
+            if allowedId == targetCamId then
+                isAllowed = true
+                break
+            end
+        end
+        
+        if not isAllowed then
+            -- instead of just returning find the next allowed camera
+            local direction = cameraIndex > currentCameraIndex and 1 or -1
+            local nextAllowedIndex = FindNextAllowedCamera(currentCameraIndex, direction)
+            
+            if nextAllowedIndex then
+                cameraIndex = nextAllowedIndex
+            else
+                return -- No allowed cameras found in that direction
+            end
+        end
+    end
+    
+    exports['glitch-securityCameras']:ClearAllHighlights()
     interactablePropInView = nil
     ResetCameraUI()
     
@@ -237,8 +293,36 @@ function SwitchCamera(cameraIndex)
         cameraName = config.Cameras[currentCameraIndex].name or "Camera " .. currentCameraIndex,
         location = config.Cameras[currentCameraIndex].location or "Unknown Area"
     })
+end
+
+function FindNextAllowedCamera(startIndex, direction)
+    if #allowedCameraIds == 0 then return nil end
     
-    print("^2Switched to camera " .. currentCameraIndex .. "^7")
+    local index = startIndex
+    local totalCameras = #config.Cameras
+    
+    -- loop through all cameras once
+    for i = 1, totalCameras do
+        -- move to next camera index
+        index = index + direction
+        
+        -- handle wrapping around
+        if index > totalCameras then
+            index = 1
+        elseif index < 1 then
+            index = totalCameras
+        end
+        
+        -- check if this camera is allowed
+        local camId = config.Cameras[index].id
+        for _, allowedId in ipairs(allowedCameraIds) do
+            if allowedId == camId then
+                return index
+            end
+        end
+    end
+    
+    return nil
 end
 
 -- ============================
@@ -276,18 +360,50 @@ function HandleCameraControls()
         SetCamRot(currentCamera, camRot.x, camRot.y, camRot.z, 2)
     end
     
-    if IsDisabledControlJustPressed(0, controls.exit) then
+    if IsControlJustPressed(0, controls.exit) then
         ExitCameraMode()
     end
     
-    if IsControlJustPressed(0, controls.left) then
-        local newIndex = currentCameraIndex - 1
-        if newIndex < 1 then newIndex = #config.Cameras end
-        SwitchCamera(newIndex)
-    elseif IsControlJustPressed(0, controls.right) then
-        local newIndex = currentCameraIndex + 1
-        if newIndex > #config.Cameras then newIndex = 1 end
-        SwitchCamera(newIndex)
+    local leftPressed = IsControlJustPressed(0, controls.left) or IsDisabledControlJustPressed(0, controls.left)
+    local rightPressed = IsControlJustPressed(0, controls.right) or IsDisabledControlJustPressed(0, controls.right)
+    
+    if leftPressed then        
+        if #allowedCameraIds > 0 then
+            local nextAllowedIndex = FindNextAllowedCamera(currentCameraIndex, -1)
+            if nextAllowedIndex then
+                SwitchCamera(nextAllowedIndex)
+            end
+        else
+            local newIndex = currentCameraIndex - 1
+            if newIndex < 1 then newIndex = #config.Cameras end
+            SwitchCamera(newIndex)
+        end
+    elseif rightPressed then        
+        if #allowedCameraIds > 0 then
+            local nextAllowedIndex = FindNextAllowedCamera(currentCameraIndex, 1)
+            if nextAllowedIndex then
+                SwitchCamera(nextAllowedIndex)
+            end
+        else
+            local newIndex = currentCameraIndex + 1
+            if newIndex > #config.Cameras then newIndex = 1 end
+            SwitchCamera(newIndex)
+        end
+    end
+    
+    if IsControlJustPressed(0, controls.viewMode) then
+        if currentViewMode == "normal" then
+            SetCameraViewMode("thermal")
+        elseif currentViewMode == "nightvision" then
+            SetCameraViewMode("normal")
+        else
+            SetCameraViewMode("nightvision")
+        end
+        
+        SendNUIMessage({
+            type = 'setViewMode',
+            mode = currentViewMode
+        })
     end
     
     if IsControlJustPressed(0, controls.interact) then
@@ -296,20 +412,14 @@ function HandleCameraControls()
         end
     end
     
-    -- currently not complete
-    if IsControlJustPressed(0, controls.viewMode) then -- V key
-        if currentViewMode == "normal" then
-            SetCameraViewMode("thermal")
-        elseif currentViewMode == "thermal" then
-            SetCameraViewMode("nightvision")
-        else
-            SetCameraViewMode("normal")
-        end
-        
-        SendNUIMessage({
-            type = 'setViewMode',
-            mode = currentViewMode
-        })
+    if IsControlJustPressed(0, 37) then
+        local newIndex = currentCameraIndex - 1
+        if newIndex < 1 then newIndex = #config.Cameras end
+        SwitchCamera(newIndex)
+    elseif IsControlJustPressed(0, 39) then
+        local newIndex = currentCameraIndex + 1
+        if newIndex > #config.Cameras then newIndex = 1 end
+        SwitchCamera(newIndex)
     end
 end
 
@@ -320,20 +430,9 @@ end
 function GetPropSize(propType)
     local sizes = {
         default = {radius = 1.0, tolerance = 15.0},
-        computer = {radius = 1.5, tolerance = 20.0},
-        panel = {radius = 1.2, tolerance = 18.0},
-        keypad = {radius = 0.5, tolerance = 12.0},
-        camera = {radius = 0.6, tolerance = 13.0},
-        server = {radius = 2.0, tolerance = 22.0},
-        laptop = {radius = 0.8, tolerance = 15.0},
-        terminal = {radius = 1.2, tolerance = 18.0},
-        switch = {radius = 0.4, tolerance = 10.0},
-        router = {radius = 0.7, tolerance = 14.0},
-        breaker = {radius = 1.0, tolerance = 16.0},
-        door = {radius = 1.8, tolerance = 20.0},
-        small = {radius = 0.5, tolerance = 12.0},
-        medium = {radius = 1.0, tolerance = 16.0},
-        large = {radius = 2.0, tolerance = 22.0},
+        -- These are examples, you can adjust the values as needed
+        door = {radius = 1.5, tolerance = 20.0},
+        doubleDoor = {radius = 1.2, tolerance = 18.0},
     }
     
     return sizes[propType] or sizes.default
@@ -426,7 +525,7 @@ function CheckInteractiveProps()
     local oldInteractableProp = interactablePropInView
     interactablePropInView = nil
     
-    exports['luma-securityCameras']:ClearAllHighlights()
+    exports['glitch-securityCameras']:ClearAllHighlights()
     
     if not config.Cameras[currentCameraIndex].interactiveProps then
         if config.TestingMode then
@@ -436,10 +535,11 @@ function CheckInteractiveProps()
     end
     
     for _, prop in ipairs(config.Cameras[currentCameraIndex].interactiveProps) do
-        if completedHacks[prop.id] then
+        if completedHacks[prop.propUniqueId] then
             if config.TestingMode then
-                exports['luma-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 0, g = 0, b = 255, a = 100})
+                exports['glitch-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 0, g = 0, b = 255, a = 100})
             end
+            
             goto continue
         end
         
@@ -447,16 +547,16 @@ function CheckInteractiveProps()
         
         if IsPropInView(camCoords, camRot, prop.position, propSize) then
             interactablePropInView = prop
-            exports['luma-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 0, g = 255, b = 0, a = 200})
+            exports['glitch-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 0, g = 255, b = 0, a = 200})
             
             if config.TestingMode then
-                print("^2Prop is interactable: " .. prop.id .. "^7")
+                print("^2Prop is interactable: " .. prop.propUniqueId .. "^7")
             end
             
             SendNUIMessage({
                 type = 'setInteractableProp',
                 prop = {
-                    id = prop.id,
+                    id = prop.propUniqueId,
                     type = prop.type or "default"
                 }
             })
@@ -473,7 +573,7 @@ function CheckInteractiveProps()
             
             break
         elseif config.TestingMode then
-            exports['luma-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 255, g = 165, b = 0, a = 100})
+            exports['glitch-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 255, g = 165, b = 0, a = 100})
         end
         
         ::continue::
@@ -523,7 +623,7 @@ end
 function TriggerHackMinigame(prop)
     if not inCameraMode then return end
     
-    if completedHacks[prop.id] then
+    if completedHacks[prop.propUniqueId] then
         if config.TestingMode then
             print("^3This hack has already been completed^7")
         end
@@ -531,7 +631,7 @@ function TriggerHackMinigame(prop)
     end
     
     if config.TestingMode then
-        print("^2Preparing hack minigame for prop: " .. prop.id .. "^7")
+        print("^2Preparing hack minigame for prop: " .. prop.propUniqueId .. "^7")
     end
     
     SendNUIMessage({
@@ -547,11 +647,11 @@ function TriggerHackMinigame(prop)
         if hackCompleted then return end
         hackCompleted = true
         
-        completedHacks[prop.id] = true
+        completedHacks[prop.propUniqueId] = true
         
-        TriggerEvent('luma-securityCameras:client:hackCompleted', true, prop.id)
+        TriggerEvent('glitch-securityCameras:client:hackCompleted', true, prop.propUniqueId)
         
-        exports['luma-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 0, g = 0, b = 255, a = 100})
+        exports['glitch-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 0, g = 0, b = 255, a = 100})
         
         ResetCameraUI()
         
@@ -562,15 +662,15 @@ function TriggerHackMinigame(prop)
         })
         
         if prop.onSuccessEvent and prop.useClientEvent then
-            TriggerEvent(prop.onSuccessEvent, prop.id)
+            TriggerEvent(prop.onSuccessEvent, prop.propUniqueId)
         elseif prop.onSuccessEvent and not prop.useClientEvent then
-            TriggerEvent(prop.onSuccessEvent, prop.id)
+            TriggerEvent(prop.onSuccessEvent, prop.propUniqueId)
         end
         
         if prop.onSuccessServerEvent and prop.useSeverEvent then
-            TriggerServerEvent(prop.onSuccessServerEvent, prop.id)
+            TriggerServerEvent(prop.onSuccessServerEvent, prop.propUniqueId)
         elseif prop.onSuccessServerEvent and not prop.useSeverEvent then
-            TriggerServerEvent(prop.onSuccessServerEvent, prop.id)
+            TriggerServerEvent(prop.onSuccessServerEvent, prop.propUniqueId)
         end
         
         SetTimeout(1500, function()
@@ -578,7 +678,7 @@ function TriggerHackMinigame(prop)
                 ExitCameraMode()
                 
                 if prop.successMessage then
-                    TriggerEvent('luma-securityCameras:notify', prop.successMessage, 'success')
+                    TriggerEvent('glitch-securityCameras:notify', prop.successMessage, 'success')
                 end
             end
         end)
@@ -588,7 +688,7 @@ function TriggerHackMinigame(prop)
         if hackCompleted then return end
         hackCompleted = true
         
-        TriggerEvent('luma-securityCameras:client:hackCompleted', false, prop.id)
+        TriggerEvent('glitch-securityCameras:client:hackCompleted', false, prop.propUniqueId)
         
         SendNUIMessage({
             type = 'showNotification',
@@ -599,11 +699,11 @@ function TriggerHackMinigame(prop)
         ResetCameraUI()
         
         if prop.onFailEvent then
-            TriggerEvent(prop.onFailEvent, prop.id)
+            TriggerEvent(prop.onFailEvent, prop.propUniqueId)
         end
         
         if prop.onFailServerEvent then
-            TriggerServerEvent(prop.onFailServerEvent, prop.id)
+            TriggerServerEvent(prop.onFailServerEvent, prop.propUniqueId)
         end
         
         SendNUIMessage({
@@ -650,34 +750,11 @@ function TriggerHackMinigame(prop)
                 handleFailure()
             end
         end)
-    
-    -- Glitch Casino Heist method for hack
-    else
-        local hackType = prop.hackType or "default"
-        local hackStage = prop.hackStage or 1
-        local params = prop.hackParams or {}
-        
-        if config.TestingMode then
-            print("^2Using default hack system: " .. hackType .. " (Stage: " .. tostring(hackStage) .. ")^7")
-        end
-        
-        PerformHack(hackType, hackStage, function(success)
-            if config.TestingMode then
-                print("^3Hack result received: " .. (success and "SUCCESS" or "FAILURE") .. "^7")
-            end
-            
-            if success then
-                handleSuccess()
-            else
-                handleFailure()
-            end
-        end, params)
     end
     
     interactablePropInView = nil
 end
 
--- Fix 1: Correct string.split implementation
 string.split = function(str, delimiter)
     if not str or str == "" then return {} end
     
@@ -721,7 +798,7 @@ function ResetCompletedHacks()
     print("^3All completed hacks have been reset^7")
     
     if inCameraMode then
-        exports['luma-securityCameras']:ClearAllHighlights()
+        exports['glitch-securityCameras']:ClearAllHighlights()
         CheckInteractiveProps()
     end
 end
@@ -755,14 +832,17 @@ end)
 
 RegisterCommand('testcam', function(source, args)
     if config.TestingMode then
-        if inCameraMode then
-            ExitCameraMode()
+        local success = exports['glitch-securityCameras']:AttemptCameraHack(1, "security_mainframe", {1, 2, 3})
+        if success then
+            print("Hack success!")
+        elseif not success then
+            print("Hack failed!")
         else
-            local cameraIndex = tonumber(args[1]) or 1
-            EnterCameraMode(cameraIndex)
+            print("No hack attempted!")
         end
     end
 end, false)
+
 
 RegisterKeyMapping('+exitCamera', 'Exit Camera Mode', 'keyboard', 'escape')
 
@@ -773,6 +853,43 @@ RegisterCommand('+exitCamera', function()
 end, false)
 
 RegisterCommand('-exitCamera', function() end, false)
+
+RegisterKeyMapping('+camLeft', 'Previous Camera', 'keyboard', 'LEFT')
+RegisterKeyMapping('+camRight', 'Next Camera', 'keyboard', 'RIGHT')
+
+RegisterCommand('+camLeft', function()
+    if inCameraMode then
+        if #allowedCameraIds > 0 then
+            local nextAllowedIndex = FindNextAllowedCamera(currentCameraIndex, -1)
+            if nextAllowedIndex then
+                SwitchCamera(nextAllowedIndex)
+            end
+        else
+            local newIndex = currentCameraIndex - 1
+            if newIndex < 1 then newIndex = #config.Cameras end
+            SwitchCamera(newIndex)
+        end
+    end
+end, false)
+
+RegisterCommand('-camLeft', function() end, false)
+
+RegisterCommand('+camRight', function()
+    if inCameraMode then
+        if #allowedCameraIds > 0 then
+            local nextAllowedIndex = FindNextAllowedCamera(currentCameraIndex, 1)
+            if nextAllowedIndex then
+                SwitchCamera(nextAllowedIndex)
+            end
+        else
+            local newIndex = currentCameraIndex + 1
+            if newIndex > #config.Cameras then newIndex = 1 end
+            SwitchCamera(newIndex)
+        end
+    end
+end, false)
+
+RegisterCommand('-camRight', function() end, false)
 
 exports('EnterCameraMode', EnterCameraMode)
 exports('ExitCameraMode', ExitCameraMode)
@@ -790,18 +907,20 @@ function SetCameraViewMode(mode)
     if mode == "normal" then
         ClearTimecycleModifier()
         SetNightvision(false)
+        SetSeethrough(false)
     elseif mode == "thermal" then
-        SetTimecycleModifier("scanning")
-        SetNightvision(false)
+        SetNightvision(true)
+		SetSeethrough(true)
     elseif mode == "nightvision" then
         SetNightvision(true)
+        SetSeethrough(false)
     end
 end
 
 local hackResult = nil
 local waitingForResult = false
 
-function AttemptCameraHack(cameraIndex, propId)
+function AttemptCameraHack(cameraIndex, propId, allowedCameras)
     local p = promise.new()
     
     if not cameraIndex or not propId then
@@ -812,18 +931,33 @@ function AttemptCameraHack(cameraIndex, propId)
         return false
     end
     
-    local hackListener = AddEventHandler('luma-securityCameras:client:hackCompleted', function(success, hackPropId)
-        if hackPropId == propId then
-            RemoveEventHandler(hackListener)
-            p:resolve(success)
-            
-            if inCameraMode then
-                ExitCameraMode()
+    if #allowedCameraIds > 0 then
+        local targetCamId = config.Cameras[cameraIndex].id
+        local isAllowed = false
+        
+        for _, allowedId in ipairs(allowedCameraIds) do
+            if allowedId == targetCamId then
+                isAllowed = true
+                break
             end
+        end
+        
+        if not isAllowed then
+            print("^1Camera not in allowed list^7")
+            return
+        end
+    end
+    
+    local hackListener = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
+        RemoveEventHandler(hackListener)
+        p:resolve(success)
+        
+        if inCameraMode then
+            ExitCameraMode()
         end
     end)
     
-    EnterCameraMode(cameraIndex)
+    EnterCameraMode(cameraIndex, allowedCameras)
     
     SetTimeout(60000, function()
         if not p:isDone() then

@@ -1,6 +1,6 @@
 description 'Security Camera System'
 fx_version 'cerulean'
-author 'Luma'
+author 'Luma in collaboration with Glitch'
 lua54 'yes'
 games { 'gta5' }
 
