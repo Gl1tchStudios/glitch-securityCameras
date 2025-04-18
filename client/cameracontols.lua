@@ -77,7 +77,9 @@ function EnterCameraMode(cameraIndex, allowed)
     
     -- setup hack completion handler
     hackListenerEvent = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
-        RemoveEventHandler(hackListenerEvent)
+        local handlerRef = hackListenerEvent
+        hackListenerEvent = nil
+        RemoveEventHandler(handlerRef)
         p:resolve(success)
         
         if inCameraMode then
@@ -85,22 +87,21 @@ function EnterCameraMode(cameraIndex, allowed)
         end
     end)
     
-    -- set timeout
-    local promiseResolved = false
-    p:next(function()
-        promiseResolved = true
-    end)
-    
-    SetTimeout(60000, function()
-        if not promiseResolved then
-            RemoveEventHandler(hackListenerEvent)
-            p:resolve(false)
-            
-            if inCameraMode then
-                ExitCameraMode() 
+    -- Only set timeout if auto-exit is enabled in config
+    if config.AutoExitEnabled then
+        local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds, default to 60s if not set
+        
+        SetTimeout(timeoutDuration, function()
+            if not p:isDone() then
+                RemoveEventHandler(hackListenerEvent)
+                p:resolve(false)
+                
+                if inCameraMode then
+                    ExitCameraMode()
+                end
             end
-        end
-    end)
+        end)
+    end
     
     -- start camera mode
     cameraIndex = cameraIndex or 1
@@ -832,7 +833,7 @@ end)
 
 RegisterCommand('testcam', function(source, args)
     if config.TestingMode then
-        local success = exports['glitch-securityCameras']:AttemptCameraHack(1, "security_mainframe", {1, 2, 3})
+        local success = exports['glitch-securityCameras']:AttemptCameraHack(1, "security_mainframe")
         if success then
             print("Hack success!")
         elseif not success then
@@ -949,7 +950,9 @@ function AttemptCameraHack(cameraIndex, propId, allowedCameras)
     end
     
     local hackListener = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
-        RemoveEventHandler(hackListener)
+        local handlerRef = hackListener
+        hackListener = nil
+        RemoveEventHandler(handlerRef)
         p:resolve(success)
         
         if inCameraMode then
@@ -959,16 +962,21 @@ function AttemptCameraHack(cameraIndex, propId, allowedCameras)
     
     EnterCameraMode(cameraIndex, allowedCameras)
     
-    SetTimeout(60000, function()
-        if not p:isDone() then
-            RemoveEventHandler(hackListener)
-            p:resolve(false)
-            
-            if inCameraMode then
-                ExitCameraMode()
+    -- Only set timeout if auto-exit is enabled in config
+    if config.AutoExitEnabled then
+        local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds, default to 60s if not set
+        
+        SetTimeout(timeoutDuration, function()
+            if not p:isDone() then
+                RemoveEventHandler(hackListener)
+                p:resolve(false)
+                
+                if inCameraMode then
+                    ExitCameraMode()
+                end
             end
-        end
-    end)
+        end)
+    end
     
     return Citizen.Await(p)
 end

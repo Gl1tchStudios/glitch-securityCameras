@@ -2,7 +2,8 @@ config = {}
 
 config.TestingMode = false -- Set to true for testing purposes, false for production
 
--- can only acess cameras which are set when function to go into camera mode is called
+config.AutoExitEnabled = true -- Set to false to disable the automatic camera exit feature
+config.AutoExitTime = 300 -- Time in seconds before automatically exiting camera mode
 
 config.Cameras = {
     {
@@ -18,10 +19,10 @@ config.Cameras = {
         interactiveProps = {
             -- Example using an export for the minigame
             {
-                propUniqueId = "security_mainframe",                          -- Unique ID for the prop
+                propUniqueId = "security_mainframe",                -- Unique ID for the prop
                 position = vector3(2509.0986, -260.3841, -54.0064), -- Prop position
                 hash = -1498975473,                                 -- Hash of the prop model
-                interactionText = "Hack Security Mainframe",        -- Text displayed when interacting with the prop
+                interactionText = "Disable the Door Locks",         -- Text displayed when interacting with the prop
                 successText = "Security system bypassed",           -- Text displayed on success
                 failText = "Security alert triggered",              -- Text displayed on failure
                 highlightColor = {r = 0, g = 255, b = 0, a = 200},  -- Color of the highlight
@@ -37,19 +38,19 @@ config.Cameras = {
     },
     {
         id = 2,                                                     -- Unique ID for the camera
-        name = "Vault Entrance",                                   -- Camera name
-        location = "Diamond Casino & Resort",                      -- Location of the camera
-        position = vector3(914.1590, 59.8150, 114.8563),           -- Camera position
-        rotation = vector3(-15.0, 0.0, 80.0),                      -- Camera rotation
+        name = "Security Staff Facilities",                         -- Camera name
+        location = "Diamond Casino & Resort",                       -- Location of the camera
+        position = vector3(2530.2432, -265.8049, -56.6363),         -- Camera position
+        rotation = vector3(-15.0, 0.0, 44.5),                       -- Camera rotation
         interactiveProps = {
             -- Example using an export for the minigame
             {
-                propUniqueId = "vault_panel",                                 -- Unique ID for the prop
-                position = vector3(918.593, 52.019, 110.709),       -- Prop position
-                hash = 1878378076,                                  -- Hash of the prop model
-                interactionText = "Bypass Vault Security",          -- Text displayed when interacting with the prop
-                successText = "Vault security disabled",            -- Text displayed on success
-                failText = "Security breach detected",              -- Text displayed on failure
+                propUniqueId = "door1",                             -- Unique ID for the prop
+                position = vector3(2530.8559, -273.8801, -58.5731), -- Prop position
+                hash = 1243560448,                                  -- Hash of the prop model
+                interactionText = "Disable the Door Locks",         -- Text displayed when interacting with the prop
+                successText = "Security system bypassed",           -- Text displayed on success
+                failText = "Security alert triggered",              -- Text displayed on failure
                 highlightColor = {r = 255, g = 165, b = 0, a = 200},-- Color of the highlight
 
                 hackExport = "glitch-minigames:StartSurgeOverride", -- Export to call for hack minigame
@@ -63,6 +64,58 @@ config.Cameras = {
     },
     {
         id = 3,                                                     -- Unique ID for the camera
+        name = "Security Staff Facilities",                         -- Camera name
+        location = "Diamond Casino & Resort",                       -- Location of the camera
+        position = vector3(2544.5154, -288.5128, -57.0363),         -- Camera position
+        rotation = vector3(-15.0, 0.0, 80.0),                       -- Camera rotation
+        interactiveProps = {
+            -- Example using an export for the minigame
+            {
+                propUniqueId = "door2",                             -- Unique ID for the prop
+                position = vector3(2536.1564, -283.6008, -58.5731), -- Prop position
+                hash = 1243560448,                                  -- Hash of the prop model
+                interactionText = "Disable the Door Locks",         -- Text displayed when interacting with the prop
+                successText = "Security system bypassed",           -- Text displayed on success
+                failText = "Security alert triggered",              -- Text displayed on failure
+                highlightColor = {r = 255, g = 165, b = 0, a = 200},-- Color of the highlight
+
+                hackExport = "glitch-minigames:StartSurgeOverride", -- Export to call for hack minigame
+                hackParams = {                                      -- Parameters for the hack minigame
+                    keys = {'E', 'F'},
+                    requiredPresses = 30,
+                    decayRate = 2
+                },
+            }
+        }
+    },
+    {
+        id = 4,                                                    -- Unique ID for the camera
+        name = "Security Staff Facilities",                        -- Camera name
+        location = "Diamond Casino & Resort",                      -- Location of the camera
+        position = vector3(2529.7446, -288.6646, -56.6363),        -- Camera position
+        rotation = vector3(-15.0, 0.0, 80.0),                      -- Camera rotation
+        interactiveProps = {
+            -- Example using an export for the minigame
+            {
+                propUniqueId = "door3",                             -- Unique ID for the prop
+                position = vector3(2533.6467, -284.9404, -58.5731), -- Prop position
+                hash = 1243560448,                                  -- Hash of the prop model
+                interactionText = "Disable the Door Locks",         -- Text displayed when interacting with the prop
+                successText = "Security system bypassed",           -- Text displayed on success
+                failText = "Security alert triggered",              -- Text displayed on failure
+                highlightColor = {r = 255, g = 165, b = 0, a = 200},-- Color of the highlight
+
+                hackExport = "glitch-minigames:StartSurgeOverride", -- Export to call for hack minigame
+                hackParams = {                                      -- Parameters for the hack minigame
+                    keys = {'E', 'F'},
+                    requiredPresses = 30,
+                    decayRate = 2
+                },
+            }
+        }
+    },
+    {
+        id = 5,                                                    -- Unique ID for the camera
         name = "Staff Area",                                       -- Camera name
         location = "Diamond Casino & Resort",                      -- Location of the camera
         position = vector3(-42.2057, -476.2073, 48.6294),          -- Camera position
@@ -70,7 +123,7 @@ config.Cameras = {
         interactiveProps = {
             -- Example using an event for the minigame
             {
-                propUniqueId = "staff_computer",                              -- Unique ID for the prop
+                propUniqueId = "staff_computer",                    -- Unique ID for the prop
                 position = vector3(2535.16, -266.65, 70.54),        -- Prop position
                 hash = `xm_prop_x17_laptop_mrk2_01a`,               -- Hash of the prop model
                 interactionText = "Access Staff Records",           -- Text displayed when interacting with the prop
