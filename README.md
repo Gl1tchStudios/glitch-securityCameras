@@ -12,7 +12,8 @@ A comprehensive security camera system for your FiveM server. This resource allo
 - 🔍 **Object Detection**: Identify and interact with hackable objects in camera view  
 - 🔓 **Hacking System**: Integrated hacking interface compatible with popular minigames  
 - 🧩 **Modular Design**: Easy to integrate with other scripts and resources  
-- 🛠️ **Developer API**: Comprehensive exports for developers to integrate with other systems  
+- 🛠️ **Easy to use for Intergration**: Comprehensive exports for developers to integrate with other systems  
+- 🔄 **Dynamic Camera Management**: Add and remove cameras programmatically during runtime
 
 ## 📷 Media
 
@@ -44,11 +45,24 @@ The system is configured through the `config.lua` file. Here you can define:
 - **Camera rotation limits**  
 - **Interactive props and their behavior**  
 - **Hack types and parameters**  
+- **Auto-exit behavior settings**
+
+### 📌 Configuration Options
+```lua
+-- Testing mode for development
+config.TestingMode = true -- Set to true for testing purposes, false for production
+
+-- Camera auto-exit settings
+config.AutoExitEnabled = true -- Set to false to disable the automatic camera exit feature
+config.AutoExitTime = 60 -- Time in seconds before automatically exiting camera mode
+```
 
 ### 📌 Camera Configuration Example  
 ``` lua
+-- Static configuration in config.lua (legacy method)
 config.Cameras = {
     {
+        id = "vault_cam1",                                        -- Unique identifier for the camera
         name = "Vault Entrance",                                   -- Camera name
         location = "Diamond Casino & Resort",                      -- Location of the camera
         position = vector3(914.1590, 59.8150, 114.8563),           -- Camera position
@@ -56,7 +70,7 @@ config.Cameras = {
         interactiveProps = {
             {
                 -- Example using a specific export
-                id = "vault_panel",                                 -- Unique ID for the prop
+                propUniqueId = "vault_panel",                      -- Unique ID for the prop
                 position = vector3(918.593, 52.019, 110.709),       -- Prop position
                 hash = 1878378076,                                  -- Hash of the prop model
                 interactionText = "Bypass Vault Security",          -- Text displayed when interacting with the prop
@@ -74,6 +88,47 @@ config.Cameras = {
         }
     },
 }
+```
+
+### 📌 Dynamic Camera Configuration Example
+```lua
+-- Dynamic camera adding (recommended method)
+local newCamera = {
+    id = "casino_entrance",                                      -- Unique ID for the camera
+    name = "Security Entrance",                                  -- Camera name
+    location = "Diamond Casino & Resort",                        -- Location
+    position = vector3(2519.4429, -252.3573, -53.3036),          -- Position
+    rotation = vector3(-10.0, 0.0, 25.0),                        -- Rotation
+    rotationLimits = {
+        x = {min = -75.0, max = -5},                            
+        z = {min = 89, max = 175.0}                             
+    },
+    interactiveProps = {
+        {
+            propUniqueId = "security_mainframe",                
+            position = vector3(2509.0986, -260.3841, -54.0064), 
+            hash = -1498975473,                                  
+            interactionText = "Disable the Door Locks",          
+            successText = "Security system bypassed",            
+            failText = "Security alert triggered",               
+            highlightColor = {r = 0, g = 255, b = 0, a = 200},   
+            
+            hackExport = "glitch-minigames:StartSurgeOverride", 
+            hackParams = {                                      
+                keys = {'E', 'F'},
+                requiredPresses = 30,
+                decayRate = 2
+            },
+        }
+    }
+}
+
+local success, message = exports['glitch-securityCameras']:AddCamera(newCamera)
+if success then
+    print("Camera added successfully!")
+else
+    print("Failed to add camera: " .. message)
+end
 ```
 
 ---
@@ -106,23 +161,96 @@ end
 
 ---
 
+### **Camera Hack Implementation**
+#### **Using the AttemptCameraHack Export**
+
+The `AttemptCameraHack` export allows you to trigger camera hacking from your scripts. This is useful for implementing actions like using a security keycard on a door, hacking a terminal, or any other interaction that should give access to cameras.
+
+```lua
+-- Syntax:
+exports['glitch-securityCameras']:AttemptCameraHack(cameraIndex, propId, allowedCameras)
+
+-- Parameters:
+-- cameraIndex: The index or ID of the camera to start with
+-- propId: (Optional) The specific prop ID to focus on when entering camera mode
+-- allowedCameras: (Optional) Table of camera IDs that the player is allowed to access
+
+-- Example 1: Basic camera hack allowing access to all cameras
+RegisterNetEvent('items:useSecurityKeycard')
+AddEventHandler('items:useSecurityKeycard', function()
+    local success = exports['glitch-securityCameras']:AttemptCameraHack(1)
+    if success then
+        -- Player successfully accessed and used the cameras
+        TriggerServerEvent('items:removeKeycard')
+    end
+end)
+
+-- Example 2: Restricted camera access with focus on specific prop
+RegisterNetEvent('items:useHackingDevice')
+AddEventHandler('items:useHackingDevice', function()
+    -- Only allow access to cameras 2, 5, and 8, and focus on the vault_panel prop
+    local success = exports['glitch-securityCameras']:AttemptCameraHack(2, "vault_panel", {2, 5, 8})
+    if success then
+        -- The player successfully hacked something in the camera system
+        TriggerEvent('notifications:client:SendAlert', {
+            text = "You successfully bypassed the security system",
+            type = "success"
+        })
+    elseif success == false then
+        -- The player failed the hack
+        TriggerEvent('notifications:client:SendAlert', {
+            text = "Hack failed - security alerted!",
+            type = "error"
+        })
+    else
+        -- The player exited without attempting a hack
+        TriggerEvent('notifications:client:SendAlert', {
+            text = "You disconnected from the security system",
+            type = "inform"
+        })
+    end
+end)
+```
+
+When using `AttemptCameraHack`, the function will return:
+- `true` if the player successfully completed a hack while in camera mode
+- `false` if the player attempted a hack but failed
+- `nil` if the player exited camera mode without attempting any hack
+
+---
+
 ### **Exported Functions**
 
 #### **Client Exports**
 ``` lua
-EnterCameraMode(cameraIndex)                                        -- Enter camera mode with specified camera
+-- Camera Control
+EnterCameraMode(cameraIndex, allowedCameraIds)                      -- Enter camera mode with specified camera (optional: limit to specific IDs)
 ExitCameraMode()                                                    -- Exit camera mode
 SwitchCamera(cameraIndex)                                           -- Switch to a different camera
+SetCameraViewMode(mode)                                             -- Set view mode (normal, thermal, nightvision)
+
+-- Camera Management
+AddCamera(cameraData)                                               -- Add a new camera to the system
+RemoveCamera(cameraId)                                              -- Remove a camera by ID
+GetAllCameras()                                                     -- Get all cameras in the system
+GetCameraById(cameraId)                                             -- Get a camera by ID
+AttemptCameraHack(cameraIndex, propId, allowedCameras)              -- Try to hack a camera with optional camera restrictions
+
+-- Props and Highlighting
 SetHighlightActive(active)                                          -- Enable/disable object highlighting
 HighlightProp(coords, modelHash, color)                             -- Highlight a specific prop
 RemoveHighlight(highlightId)                                        -- Remove a specific highlight
 ClearAllHighlights()                                                -- Remove all highlights
 IsLookingAtProp(propCoords, cameraCoords, cameraRot, maxDistance)   -- Check if a prop is in view
+
+-- Hack System
+ResetCompletedHacks()                                               -- Reset all completed hacks to their initial state
 ```
 
 #### **Server Exports**
 ``` lua
-IsHacked(cameraId, propId) -- Check if a camera has been hacked
+IsHacked(cameraId, propId)                                          -- Check if a camera has been hacked
+RefreshCameraSystem()                                               -- Refresh cameras for all connected clients
 ```
 
 ---
