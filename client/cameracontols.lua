@@ -47,6 +47,11 @@ function EnterCameraMode(cameraIndex, allowed)
     end
     
     local p = promise.new()
+    local promiseResolved = false
+    
+    p:next(function()
+        promiseResolved = true
+    end)
     
     -- Store allowed camera IDs
     allowedCameraIds = allowed or {}
@@ -77,9 +82,12 @@ function EnterCameraMode(cameraIndex, allowed)
     
     -- setup hack completion handler
     hackListenerEvent = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
-        local handlerRef = hackListenerEvent
-        hackListenerEvent = nil
-        RemoveEventHandler(handlerRef)
+        if hackListenerEvent then
+            local handlerRef = hackListenerEvent
+            hackListenerEvent = nil
+            RemoveEventHandler(handlerRef)
+        end
+        
         p:resolve(success)
         
         if inCameraMode then
@@ -91,12 +99,12 @@ function EnterCameraMode(cameraIndex, allowed)
         local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds, default to 60s if not set
         
         SetTimeout(timeoutDuration, function()
-            if not p:isDone() then
+            if not promiseResolved then
                 RemoveEventHandler(hackListenerEvent)
                 p:resolve(false)
                 
                 if inCameraMode then
-                    ExitCameraMode()
+                    ExitCameraMode() 
                 end
             end
         end)
@@ -234,8 +242,7 @@ function ExitCameraMode()
     
     currentViewMode = "normal"
     SetNightvision(false)
-
-    SetCameraViewMode("normal")
+    SetSeethrough(false)
     
     DoScreenFadeIn(500)
     
@@ -677,6 +684,10 @@ function TriggerHackMinigame(prop)
             style = "success"
         })
         
+        currentViewMode = "normal"
+        SetNightvision(false)
+        SetSeethrough(false)
+        
         if prop.onSuccessEvent and prop.useClientEvent then
             TriggerEvent(prop.onSuccessEvent, prop.propUniqueId)
         elseif prop.onSuccessEvent and not prop.useClientEvent then
@@ -938,36 +949,24 @@ local waitingForResult = false
 
 function AttemptCameraHack(cameraIndex, propId, allowedCameras)
     local p = promise.new()
+    local promiseResolved = false
+    
+    p:next(function()
+        promiseResolved = true
+    end)
     
     if not cameraIndex or not propId then
         return false
     end
-    
-    if not config.Cameras or not config.Cameras[cameraIndex] then
-        return false
-    end
-    
-    if #allowedCameraIds > 0 then
-        local targetCamId = config.Cameras[cameraIndex].id
-        local isAllowed = false
         
-        for _, allowedId in ipairs(allowedCameraIds) do
-            if allowedId == targetCamId then
-                isAllowed = true
-                break
-            end
-        end
-        
-        if not isAllowed then
-            print("^1Camera not in allowed list^7")
-            return
-        end
-    end
-    
     local hackListener = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
-        local handlerRef = hackListener
-        hackListener = nil
-        RemoveEventHandler(handlerRef)
+        -- Check if handler is still valid before trying to remove it
+        if hackListener then
+            local handlerRef = hackListener
+            hackListener = nil
+            RemoveEventHandler(handlerRef)
+        end
+        
         p:resolve(success)
         
         if inCameraMode then
@@ -977,12 +976,11 @@ function AttemptCameraHack(cameraIndex, propId, allowedCameras)
     
     EnterCameraMode(cameraIndex, allowedCameras)
     
-    -- Only set timeout if auto-exit is enabled in config
     if config.AutoExitEnabled then
-        local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds or default to 60s if not set
+        local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds, default to 60s if not set
         
         SetTimeout(timeoutDuration, function()
-            if not p:isDone() then
+            if not promiseResolved then
                 RemoveEventHandler(hackListener)
                 p:resolve(false)
                 
