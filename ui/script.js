@@ -815,15 +815,51 @@ window.addEventListener('message', function(event) {
     if (data.type === 'updateCameraInfo') {
         if (data.cameraName) {
             const nameElement = document.getElementById('camera-name');
-            if (nameElement) nameElement.textContent = `Name: ${data.cameraName}`;
+            if (nameElement) nameElement.textContent = data.cameraName.toUpperCase();
         }
         
         if (data.location) {
             const locationElement = document.getElementById('camera-location');
-            if (locationElement) locationElement.textContent = `Location: ${data.location}`;
+            if (locationElement) locationElement.textContent = data.location.toUpperCase();
         }
         
         const modeElement = document.getElementById('camera-mode');
-        if (modeElement) modeElement.textContent = `Mode: ${currentViewMode.toUpperCase()}`;
+        if (modeElement) modeElement.textContent = `MODE: ${currentViewMode.toUpperCase()}`;
     }
 });
+
+window.addEventListener('message', function(event) {
+    const data = event.data;
+    
+    if (data.type === 'updateCameraInfo') {
+        console.log("Received camera info:", data);
+        
+        if (data.cameraName) {
+            const nameElement = document.getElementById('camera-name');
+            if (nameElement) nameElement.textContent = data.cameraName.toUpperCase();
+        }
+        
+        if (data.location) {
+            const locationElement = document.getElementById('camera-location');
+            if (locationElement) locationElement.textContent = data.location.toUpperCase();
+        }
+        
+        const modeElement = document.getElementById('camera-mode');
+        if (modeElement) modeElement.textContent = `MODE: ${currentViewMode.toUpperCase()}`;
+    }
+});
+
+if (data.type === 'updateCameraInfo') {
+    if (data.cameraName) {
+        const nameElement = document.getElementById('camera-name');
+        if (nameElement) nameElement.textContent = data.cameraName.toUpperCase();
+    }
+    
+    if (data.location) {
+        const locationElement = document.getElementById('camera-location');
+        if (locationElement) locationElement.textContent = data.location.toUpperCase();
+    }
+    
+    const modeElement = document.getElementById('camera-mode');
+    if (modeElement) modeElement.textContent = `MODE: ${currentViewMode.toUpperCase()}`;
+}

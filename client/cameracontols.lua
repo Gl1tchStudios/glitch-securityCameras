@@ -87,7 +87,6 @@ function EnterCameraMode(cameraIndex, allowed)
         end
     end)
     
-    -- Only set timeout if auto-exit is enabled in config
     if config.AutoExitEnabled then
         local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds, default to 60s if not set
         
@@ -181,6 +180,13 @@ function EnterCameraMode(cameraIndex, allowed)
         totalCameras = #config.Cameras
     })
     
+    SendNUIMessage({
+        type = 'updateCameraInfo',
+        cameraName = config.Cameras[currentCameraIndex].name,
+        location = config.Cameras[currentCameraIndex].location or "UNKNOWN",
+        cameraId = "CAM-" .. string.format("%03d", currentCameraIndex)
+    })
+    
     print("^2Camera mode activated: Camera " .. currentCameraIndex .. "^7")
     
     return Citizen.Await(p)
@@ -228,6 +234,8 @@ function ExitCameraMode()
     
     currentViewMode = "normal"
     SetNightvision(false)
+
+    SetCameraViewMode("normal")
     
     DoScreenFadeIn(500)
     
@@ -285,6 +293,13 @@ function SwitchCamera(cameraIndex)
         config.Cameras[currentCameraIndex].position.x, 
         config.Cameras[currentCameraIndex].position.y, 
         config.Cameras[currentCameraIndex].position.z)
+    
+    SendNUIMessage({
+        type = 'updateCameraInfo',
+        cameraName = config.Cameras[currentCameraIndex].name,
+        location = config.Cameras[currentCameraIndex].location or "UNKNOWN",
+        cameraId = "CAM-" .. string.format("%03d", currentCameraIndex)
+    })
     
     DoScreenFadeIn(300)
     
@@ -964,7 +979,7 @@ function AttemptCameraHack(cameraIndex, propId, allowedCameras)
     
     -- Only set timeout if auto-exit is enabled in config
     if config.AutoExitEnabled then
-        local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds, default to 60s if not set
+        local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds or default to 60s if not set
         
         SetTimeout(timeoutDuration, function()
             if not p:isDone() then
