@@ -53,10 +53,8 @@ function EnterCameraMode(cameraIndex, allowed)
         promiseResolved = true
     end)
     
-    -- Store allowed camera IDs
     allowedCameraIds = allowed or {}
     
-    -- Validate camera index first
     if not config.Cameras or not config.Cameras[cameraIndex] then 
         print("^1Invalid camera index or camera config^7")
         return Citizen.Await(promise.resolve(false))
@@ -96,7 +94,7 @@ function EnterCameraMode(cameraIndex, allowed)
     end)
     
     if config.AutoExitEnabled then
-        local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds, default to 60s if not set
+        local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- convert to milliseconds default to 60s if not set
         
         SetTimeout(timeoutDuration, function()
             if not promiseResolved then
@@ -251,8 +249,9 @@ end
 
 function SwitchCamera(cameraIndex)
     if not inCameraMode or not config.Cameras[cameraIndex] then return end
-    
-    -- check if this camera is allowed
+
+    SetCameraViewMode("normal")
+
     if #allowedCameraIds > 0 then
         local targetCamId = config.Cameras[cameraIndex].id
         local isAllowed = false
@@ -265,14 +264,13 @@ function SwitchCamera(cameraIndex)
         end
         
         if not isAllowed then
-            -- instead of just returning find the next allowed camera
             local direction = cameraIndex > currentCameraIndex and 1 or -1
             local nextAllowedIndex = FindNextAllowedCamera(currentCameraIndex, direction)
             
             if nextAllowedIndex then
                 cameraIndex = nextAllowedIndex
             else
-                return -- No allowed cameras found in that direction
+                return
             end
         end
     end
@@ -316,6 +314,8 @@ function SwitchCamera(cameraIndex)
         cameraName = config.Cameras[currentCameraIndex].name or "Camera " .. currentCameraIndex,
         location = config.Cameras[currentCameraIndex].location or "Unknown Area"
     })
+
+    
 end
 
 function FindNextAllowedCamera(startIndex, direction)
@@ -352,6 +352,22 @@ end
 --  CAMERA CONTROL HANDLING
 -- ============================
 
+function GetCompassDirectionFromHeading(heading) -- only used in testingMode
+    local directions = {
+        [1] = "N",
+        [2] = "NE",
+        [3] = "E",
+        [4] = "SE", 
+        [5] = "S", 
+        [6] = "SW",
+        [7] = "W",
+        [8] = "NW",
+        [9] = "N"
+    }
+    
+    return directions[math.ceil(((heading % 360) / 45) + 0.5)]
+end
+
 function HandleCameraControls()
     local mouseX = GetDisabledControlNormal(0, 1) * 8.0  -- mouse Right/Left
     local mouseY = GetDisabledControlNormal(0, 2) * 8.0  -- mouse Up/Down
@@ -369,18 +385,64 @@ function HandleCameraControls()
     end
     
     local rotLimits = config.Cameras[currentCameraIndex].rotationLimits or {
-        x = {min = -89.0, max = 89.0},
-        z = {min = -180.0, max = 180.0}
+        x = {min = -75.0, max = -5},
+        z = {min = 0.0, max = 360.0}
     }
 
+    local normalizedZ = (camRot.z % 360 + 360) % 360
+    
+    if rotLimits.z.min < rotLimits.z.max then
+        if normalizedZ < rotLimits.z.min or normalizedZ > rotLimits.z.max then
+            if math.abs(normalizedZ - rotLimits.z.min) < math.abs(normalizedZ - rotLimits.z.max) then
+                normalizedZ = rotLimits.z.min
+            else
+                normalizedZ = rotLimits.z.max
+            end
+        end
+    else 
+        if normalizedZ > rotLimits.z.max and normalizedZ < rotLimits.z.min then
+            if math.abs(normalizedZ - rotLimits.z.min) < math.abs(normalizedZ - rotLimits.z.max) then
+                normalizedZ = rotLimits.z.min
+            else
+                normalizedZ = rotLimits.z.max
+            end
+        end
+    end
+    
     camRot = vector3(
         math.max(rotLimits.x.min, math.min(rotLimits.x.max, camRot.x)),
         camRot.y,
-        math.max(rotLimits.z.min, math.min(rotLimits.z.max, camRot.z))
+        normalizedZ
     )
     
     if modified then
         SetCamRot(currentCamera, camRot.x, camRot.y, camRot.z, 2)
+    end
+    
+    if config.TestingMode then
+        local heading = camRot.z
+        local compassDirection = GetCompassDirectionFromHeading(heading)
+        local screenX, screenY = 0.85, 0.1  -- Position on screen (top right)
+        
+        -- First box - Heading
+        DrawRect(screenX, screenY, 0.15, 0.06, 0, 0, 0, 150)
+        SetTextScale(0.4, 0.4)
+        SetTextFont(4)
+        SetTextColour(255, 255, 255, 255)
+        SetTextCentre(true)
+        SetTextEntry("STRING")
+        AddTextComponentString(string.format("Heading: %.1f° (%s)", heading, compassDirection))
+        DrawText(screenX, screenY - 0.015)
+        
+        -- Second box - Raw Rotation
+        SetTextScale(0.4, 0.4)
+        SetTextFont(4)
+        SetTextColour(255, 255, 255, 255)
+        SetTextCentre(true)
+        DrawRect(screenX, screenY + 0.07, 0.15, 0.06, 0, 0, 0, 150)
+        SetTextEntry("STRING")
+        AddTextComponentString(string.format("Height: %.1f", camRot.x))
+        DrawText(screenX, screenY + 0.055)
     end
     
     if IsControlJustPressed(0, controls.exit) then
@@ -415,12 +477,28 @@ function HandleCameraControls()
     end
     
     if IsControlJustPressed(0, controls.viewMode) then
+        local base = config.Cameras[currentCameraIndex]
+        
+        local nightVision = true
+        local thermal     = true
+
+        if currentCameraIndex and base and base.modes then
+            nightVision = base.modes.nightVision
+            thermal     = base.modes.thermal
+
+            if not nightVision and not thermal then return end
+        end
+
         if currentViewMode == "normal" then
-            SetCameraViewMode("thermal")
-        elseif currentViewMode == "nightvision" then
-            SetCameraViewMode("normal")
-        else
+            if thermal then 
+                SetCameraViewMode("thermal") 
+            elseif nightVision then 
+                SetCameraViewMode("nightvision")
+            end
+        elseif currentViewMode == "thermal" then
             SetCameraViewMode("nightvision")
+        else  
+            SetCameraViewMode("normal")
         end
         
         SendNUIMessage({
@@ -453,7 +531,8 @@ end
 function GetPropSize(propType)
     local sizes = {
         default = {radius = 1.0, tolerance = 15.0},
-        -- These are examples, you can adjust the values as needed
+
+        -- these are examples, you can adjust the values as needed
         door = {radius = 1.5, tolerance = 20.0},
         doubleDoor = {radius = 1.2, tolerance = 18.0},
     }
@@ -960,7 +1039,6 @@ function AttemptCameraHack(cameraIndex, propId, allowedCameras)
     end
         
     local hackListener = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
-        -- Check if handler is still valid before trying to remove it
         if hackListener then
             local handlerRef = hackListener
             hackListener = nil
@@ -978,6 +1056,19 @@ function AttemptCameraHack(cameraIndex, propId, allowedCameras)
     
     if config.AutoExitEnabled then
         local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds, default to 60s if not set
+        
+        SetTimeout(timeoutDuration, function()
+            if not promiseResolved then
+                RemoveEventHandler(hackListener)
+                p:resolve(false)
+                
+                if inCameraMode then
+                    ExitCameraMode()
+                end
+            end
+        end)
+        local timeoutDuration = (config.AutoExitTime or 60) * 1000 -- Convert to milliseconds, default to 60s if not set
+
         
         SetTimeout(timeoutDuration, function()
             if not promiseResolved then

@@ -96,7 +96,7 @@ function RefreshCameraSystem()
     TriggerClientEvent('security:refreshCameras', -1, config.Cameras)
 end
 
--- Set initialization flag once cameras are fully loaded
+-- set initialization flag once cameras are fully loaded
 RegisterNetEvent('security:camerasInitialized')
 AddEventHandler('security:camerasInitialized', function()
     CamerasInitialized = true
@@ -112,10 +112,10 @@ end)
 -- end)
 
 -- local newCamera = {
---     id = "casino_entrance",                                      -- Unique ID for the camera
+--     id = 99,                                      -- Unique ID for the camera
 --     name = "Security Entrance",                                  -- Camera name
 --     location = "Diamond Casino & Resort",                        -- Location
---     position = vector3(2519.4429, -252.3573, -53.3036),          -- Position
+--     position = vector3(983.1218, 8.3902, 80.9837),          -- Position
 --     rotation = vector3(-10.0, 0.0, 25.0),                        -- Rotation
 --     rotationLimits = {
 --         x = {min = -75.0, max = -5},                            
@@ -141,9 +141,9 @@ end)
 --     }
 -- }
 
--- local success, message = exports['glitch-securityCameras']:AddCamera(newCamera)
--- if success then
---     print("Camera added successfully!")
--- else
---     print("Failed to add camera: " .. message)
--- end
+
+-- RegisterCommand('tcam', function(source, args, rawCommand)
+--     --exports['glitch-securityCameras']:AddCamera(newCamera)
+--     Citizen.Wait(50)
+--     exports['glitch-securityCameras']:AttemptCameraHack(1, "security_mainframe", {1,2,3,4,5,})
+-- end, false)

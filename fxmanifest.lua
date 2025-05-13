@@ -5,11 +5,14 @@ lua54 'yes'
 games { 'gta5' }
 
 client_script {
-   'client/*',
+   'client/cameraContols.lua',
+   'client/highlightSystem.lua',
+   'client/cameraUI.lua',
+   'client/cameraExports.lua'
 }
 
 server_scripts {
-    'server/*',
+    'server/server.lua',
 }
 
 shared_scripts {
@@ -21,6 +24,5 @@ ui_page 'ui/index.html'
 files {
     'ui/index.html',
     'ui/style.css',
-    'ui/script.js',
-    'ui/assets/*.png'
+    'ui/script.js'
 }

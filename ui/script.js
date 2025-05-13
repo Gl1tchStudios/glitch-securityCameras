@@ -848,18 +848,3 @@ window.addEventListener('message', function(event) {
         if (modeElement) modeElement.textContent = `MODE: ${currentViewMode.toUpperCase()}`;
     }
 });
-
-if (data.type === 'updateCameraInfo') {
-    if (data.cameraName) {
-        const nameElement = document.getElementById('camera-name');
-        if (nameElement) nameElement.textContent = data.cameraName.toUpperCase();
-    }
-    
-    if (data.location) {
-        const locationElement = document.getElementById('camera-location');
-        if (locationElement) locationElement.textContent = data.location.toUpperCase();
-    }
-    
-    const modeElement = document.getElementById('camera-mode');
-    if (modeElement) modeElement.textContent = `MODE: ${currentViewMode.toUpperCase()}`;
-}
