@@ -26,6 +26,7 @@ local currentCamera = nil
 local playerOriginalPosition = nil
 local interactablePropInView = nil
 local currentViewMode = "normal"
+local currentCameraInitialZ = nil
 
 local controls = {
     up = 172,    -- Arrow Up
@@ -213,6 +214,7 @@ function ExitCameraMode()
     DestroyCam(currentCamera, false)
     currentCamera = nil
     inCameraMode = false
+    currentCameraInitialZ = nil
     
     local playerPed = PlayerPedId()
     SetEntityCoords(playerPed, 
@@ -251,6 +253,9 @@ function SwitchCamera(cameraIndex)
     if not inCameraMode or not config.Cameras[cameraIndex] then return end
 
     SetCameraViewMode("normal")
+    
+    -- Reset the initial Z rotation tracking for the new camera
+    currentCameraInitialZ = nil
 
     if #allowedCameraIds > 0 then
         local targetCamId = config.Cameras[cameraIndex].id
@@ -369,62 +374,118 @@ function GetCompassDirectionFromHeading(heading) -- only used in testingMode
 end
 
 function HandleCameraControls()
-    local mouseX = GetDisabledControlNormal(0, 1) * 8.0  -- mouse Right/Left
-    local mouseY = GetDisabledControlNormal(0, 2) * 8.0  -- mouse Up/Down
+    mouseX = GetDisabledControlNormal(0, 1) * 8.0  -- mouse Right/Left
+    mouseY = GetDisabledControlNormal(0, 2) * 8.0  -- mouse Up/Down
     
-    local camRot = GetCamRot(currentCamera, 2)
-    local modified = false
+    camRot = GetCamRot(currentCamera, 2)
+    modified = false
     
-    if math.abs(mouseX) > 0.01 or math.abs(mouseY) > 0.01 then
-        camRot = vector3(
-            camRot.x - mouseY * 0.5,
-            camRot.y,
-            camRot.z - mouseX * 0.5
-        )
-        modified = true
-    end
+    local potentialRot = vector3(
+        camRot.x - mouseY * 0.5,
+        camRot.y,
+        camRot.z - mouseX * 0.5
+    )
     
-    local rotLimits = config.Cameras[currentCameraIndex].rotationLimits or {
+    rotLimits = config.Cameras[currentCameraIndex].rotationLimits or {
         x = {min = -75.0, max = -5},
         z = {min = 0.0, max = 360.0}
     }
 
+    potentialRot = vector3(
+        math.max(rotLimits.x.min, math.min(rotLimits.x.max, potentialRot.x)),
+        potentialRot.y,
+        potentialRot.z
+    )
+
     local normalizedZ = (camRot.z % 360 + 360) % 360
+    local potentialNormalizedZ = (potentialRot.z % 360 + 360) % 360
     
-    if rotLimits.z.min < rotLimits.z.max then
-        if normalizedZ < rotLimits.z.min or normalizedZ > rotLimits.z.max then
-            if math.abs(normalizedZ - rotLimits.z.min) < math.abs(normalizedZ - rotLimits.z.max) then
-                normalizedZ = rotLimits.z.min
+    if not currentCameraInitialZ then
+        currentCameraInitialZ = normalizedZ
+    end
+    
+    local minZ = rotLimits.z.min
+    local maxZ = rotLimits.z.max
+    local zRange = math.abs(maxZ - minZ)
+    
+    if zRange < 360 and math.abs(mouseX) > 0.01 then
+        if minZ <= maxZ then
+            local isNearMin = math.abs(normalizedZ - minZ) < 5.0
+            local isNearMax = math.abs(normalizedZ - maxZ) < 5.0
+            local movingRight = mouseX < 0
+            local movingLeft = mouseX > 0
+            
+            if isNearMin and movingLeft then
+                potentialRot = vector3(
+                    potentialRot.x,
+                    potentialRot.y,
+                    camRot.z + (minZ - normalizedZ)
+                )
+            elseif isNearMax and movingRight then
+                potentialRot = vector3(
+                    potentialRot.x,
+                    potentialRot.y,
+                    camRot.z + (maxZ - normalizedZ)
+                )
             else
-                normalizedZ = rotLimits.z.max
+                if (normalizedZ >= minZ and normalizedZ <= maxZ) then
+                    if potentialNormalizedZ < minZ then
+                        local adjustment = minZ - potentialNormalizedZ
+                        
+                        potentialRot = vector3(
+                            potentialRot.x,
+                            potentialRot.y,
+                            potentialRot.z + adjustment
+                        )
+                    elseif potentialNormalizedZ > maxZ then
+                        local adjustment = maxZ - potentialNormalizedZ
+                        
+                        potentialRot = vector3(
+                            potentialRot.x,
+                            potentialRot.y,
+                            potentialRot.z + adjustment
+                        )
+                    end
+                elseif normalizedZ < minZ and potentialNormalizedZ > normalizedZ then
+                    if potentialNormalizedZ > maxZ then
+                        potentialRot = vector3(
+                            potentialRot.x,
+                            potentialRot.y,
+                            potentialRot.z + (maxZ - potentialNormalizedZ)
+                        )
+                    end
+                elseif normalizedZ > maxZ and potentialNormalizedZ < normalizedZ then
+                    if potentialNormalizedZ < minZ then
+                        potentialRot = vector3(
+                            potentialRot.x,
+                            potentialRot.y,
+                            potentialRot.z + (minZ - potentialNormalizedZ)
+                        )
+                    end
+                else
+                    potentialRot = vector3(
+                        potentialRot.x,
+                        potentialRot.y,
+                        camRot.z
+                    )
+                end
             end
-        end
-    else 
-        if normalizedZ > rotLimits.z.max and normalizedZ < rotLimits.z.min then
-            if math.abs(normalizedZ - rotLimits.z.min) < math.abs(normalizedZ - rotLimits.z.max) then
-                normalizedZ = rotLimits.z.min
-            else
-                normalizedZ = rotLimits.z.max
-            end
+        else
+            -- unused for now ;)
         end
     end
     
-    camRot = vector3(
-        math.max(rotLimits.x.min, math.min(rotLimits.x.max, camRot.x)),
-        camRot.y,
-        normalizedZ
-    )
-    
-    if modified then
-        SetCamRot(currentCamera, camRot.x, camRot.y, camRot.z, 2)
+    if math.abs(mouseX) > 0.01 or math.abs(mouseY) > 0.01 then
+        SetCamRot(currentCamera, potentialRot.x, potentialRot.y, potentialRot.z, 2)
+        modified = true
     end
     
     if config.TestingMode then
         local heading = camRot.z
         local compassDirection = GetCompassDirectionFromHeading(heading)
-        local screenX, screenY = 0.85, 0.1  -- Position on screen (top right)
+        local screenX, screenY = 0.85, 0.1  -- position on screen
         
-        -- First box - Heading
+        -- first box - Heading
         DrawRect(screenX, screenY, 0.15, 0.06, 0, 0, 0, 150)
         SetTextScale(0.4, 0.4)
         SetTextFont(4)
@@ -1037,7 +1098,7 @@ function AttemptCameraHack(cameraIndex, propId, allowedCameras)
     if not cameraIndex or not propId then
         return false
     end
-        
+    
     local hackListener = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
         if hackListener then
             local handlerRef = hackListener

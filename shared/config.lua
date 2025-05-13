@@ -15,7 +15,7 @@ config.Cameras = {
             thermal = true
         },
         position = vector3(2519.4429, -252.3573, -53.3036),         -- Camera position
-        rotation = vector3(-10.0, 0.0, 25.0),                       -- Camera rotation
+        rotation = vector3(-10.0, 0.0, 136.7170),                       -- Camera rotation
         rotationLimits = {
             x = {min = -75.0, max = -5},                            -- Vertical limits
             z = {min = 89, max = 175.0}                             -- Horizontal limits
@@ -49,10 +49,10 @@ config.Cameras = {
             thermal = false
         },
         position = vector3(317.7059, -280.0818, 55.7572),         -- Camera position
-        rotation = vector3(-15.0, 0.0, 50.9583),                   -- Camera rotation
+        rotation = vector3(-15.0, 0.0, 32.0484),                   -- Camera rotation
         rotationLimits = {
             x = {min = -60, max = 0},                            -- Vertical limits
-            z = {min = 70, max = 338}                             -- Horizontal limits
+            z = {min = 1, max = 70}                             -- Horizontal limits
         },
         interactiveProps = {
             -- Example using no hackExport and instead relys on the user using the AttemptCameraHack export
@@ -79,10 +79,10 @@ config.Cameras = {
         name = "Front Entrance",                                    -- Camera name
         location = "Mission Row Police Department",                 -- Location of the camera
         position = vector3(432.9822, -978.0745, 34.2088),           -- Camera position
-        rotation = vector3(-15.0, 0.0, 115.5093),                   -- Camera rotation
+        rotation = vector3(-15.0, 0.0, 107.9355),                   -- Camera rotation
         rotationLimits = {
-            x = {min = -60, max = 30},                            -- Vertical limits
-            z = {min = 184, max = 1}                             -- Horizontal limits
+            x = {min = -60, max = 30},                              -- Vertical limits
+            z = {min = 1, max = 184},                               -- Horizontal limits
         },
         interactiveProps = {
             -- Example using an export for the minigame
