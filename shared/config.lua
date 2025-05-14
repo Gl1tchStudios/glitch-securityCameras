@@ -31,6 +31,7 @@ config.Cameras = {
                 failText = "Security alert triggered",              -- Text displayed on failure
                 highlightColor = {r = 0, g = 255, b = 0, a = 200},  -- Color of the highlight
                 
+                exitOnHack = false,
                 hackExport = "glitch-minigames:StartSurgeOverride", -- Export to call for hack minigame
                 hackParams = {                                      -- Parameters for the hack minigame
                     keys = {'E', 'F'},
