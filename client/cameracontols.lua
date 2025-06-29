@@ -80,7 +80,7 @@ function EnterCameraMode(cameraIndex, allowed)
     end
     
     -- setup hack completion handler
-    hackListenerEvent = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
+    hackListenerEvent = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId, exitOnHack)
         if hackListenerEvent then
             local handlerRef = hackListenerEvent
             hackListenerEvent = nil
@@ -89,7 +89,7 @@ function EnterCameraMode(cameraIndex, allowed)
         
         p:resolve(success)
         
-        if inCameraMode then
+        if inCameraMode and exitOnHack then
             ExitCameraMode()
         end
     end)
@@ -691,9 +691,6 @@ function CheckInteractiveProps()
     exports['glitch-securityCameras']:ClearAllHighlights()
     
     if not config.Cameras[currentCameraIndex].interactiveProps then
-        if config.TestingMode then
-            print("^1No interactive props defined for camera " .. currentCameraIndex .. "^7")
-        end
         return
     end
     
@@ -812,7 +809,7 @@ function TriggerHackMinigame(prop)
         
         completedHacks[prop.propUniqueId] = true
         
-        TriggerEvent('glitch-securityCameras:client:hackCompleted', true, prop.propUniqueId)
+        TriggerEvent('glitch-securityCameras:client:hackCompleted', true, prop.propUniqueId, prop.exitOnHack)
         
         exports['glitch-securityCameras']:HighlightProp(prop.position, prop.hash, {r = 0, g = 0, b = 255, a = 100})
         
@@ -839,23 +836,27 @@ function TriggerHackMinigame(prop)
         elseif prop.onSuccessServerEvent and not prop.useSeverEvent then
             TriggerServerEvent(prop.onSuccessServerEvent, prop.propUniqueId)
         end
+
+        print('prop.exitOnHack', prop.exitOnHack)
         
-        SetTimeout(1500, function()
-            if inCameraMode then
-                ExitCameraMode()
-                
-                if prop.successMessage then
-                    TriggerEvent('glitch-securityCameras:notify', prop.successMessage, 'success')
+        if prop.exitOnHack then
+            SetTimeout(1500, function()
+                if inCameraMode then
+                    ExitCameraMode()
+                    
+                    if prop.successMessage then
+                        TriggerEvent('glitch-securityCameras:notify', prop.successMessage, 'success')
+                    end
                 end
-            end
-        end)
+            end)
+        end
     end
     
     local function handleFailure()
         if hackCompleted then return end
         hackCompleted = true
         
-        TriggerEvent('glitch-securityCameras:client:hackCompleted', false, prop.propUniqueId)
+        TriggerEvent('glitch-securityCameras:client:hackCompleted', false, prop.propUniqueId, prop.exitOnHack)
         
         SendNUIMessage({
             type = 'showNotification',
@@ -1099,7 +1100,7 @@ function AttemptCameraHack(cameraIndex, propId, allowedCameras)
         return false
     end
     
-    local hackListener = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId)
+    local hackListener = AddEventHandler('glitch-securityCameras:client:hackCompleted', function(success, hackPropId, exitOnHack)
         if hackListener then
             local handlerRef = hackListener
             hackListener = nil
@@ -1108,7 +1109,7 @@ function AttemptCameraHack(cameraIndex, propId, allowedCameras)
         
         p:resolve(success)
         
-        if inCameraMode then
+        if inCameraMode and exitOnHack then
             ExitCameraMode()
         end
     end)
