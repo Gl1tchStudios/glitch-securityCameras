@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="https://store.glitchstudios.dev/img/31c61d874ad78bd3.png" alt="Security Cameras" width="100%">
+
 # glitch-securityCameras
 
 ### Security camera viewer for heists and roleplay.
