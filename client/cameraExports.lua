@@ -1,149 +1,71 @@
-config = config or {}
-config.Cameras = config.Cameras or {}
+-- Glitch Studios - glitch-securityCameras (client)
+-- Runtime camera management. Cameras added here live on this client only, so the resource
+-- that adds them has to add them on every client that needs them (see README.md).
+
+local function debugPrint(...)
+    if Config.Debug then print('[glitch-securityCameras]', ...) end
+end
 
 local function validateCameraData(cameraData)
+    if type(cameraData) ~= 'table' then
+        return false, 'Camera data must be a table'
+    end
     if not cameraData.id or not cameraData.name or not cameraData.position or not cameraData.rotation then
-        return false, "Missing required camera fields (id, name, position, rotation)"
+        return false, 'Missing required camera fields (id, name, position, rotation)'
     end
-    
-    if type(cameraData.position) ~= "vector3" or type(cameraData.rotation) ~= "vector3" then
-        return false, "Position and rotation must be vector3"
+    if type(cameraData.position) ~= 'vector3' or type(cameraData.rotation) ~= 'vector3' then
+        return false, 'Position and rotation must be vector3'
     end
-    
-    for _, camera in ipairs(config.Cameras) do
+
+    for _, camera in ipairs(Config.Cameras) do
         if camera.id == cameraData.id then
-            return false, "Camera ID already exists: " .. cameraData.id
+            return false, 'Camera ID already exists: ' .. tostring(cameraData.id)
         end
     end
-    
-    if cameraData.interactiveProps then
-        for _, prop in ipairs(cameraData.interactiveProps) do
-            if not prop.propUniqueId or not prop.position or not prop.hash then
-                return false, "Missing required prop fields (propUniqueId, position, hash)"
-            end
-            if not prop.interactionText or 
-               not prop.successText or 
-               not prop.failText then
-                return false, "Missing prop interaction text fields"
-            end
-            if not (prop.hackExport or prop.hackEvent) then
-                return false, "Either hackExport or hackEvent must be defined for props"
-            end
+
+    for _, prop in ipairs(cameraData.interactiveProps or {}) do
+        if not prop.propUniqueId or not prop.position or not prop.hash then
+            return false, 'Missing required prop fields (propUniqueId, position, hash)'
         end
+        -- hackExport and hackEvent are optional: without them Config.DefaultHack runs.
     end
-    
-    return true, "Camera validated successfully"
+
+    return true, 'Camera validated successfully'
 end
 
 local function addCamera(cameraData)
     local isValid, message = validateCameraData(cameraData)
     if not isValid then
-        print("Failed to add camera: " .. message)
+        debugPrint('Failed to add camera: ' .. message)
         return false, message
     end
-    
-    table.insert(config.Cameras, cameraData)
-    
-    if CamerasInitialized then
-        RefreshCameraSystem()
-    end
-    
-    print("Camera added successfully: " .. cameraData.name)
-    return true, "Camera added successfully"
+
+    Config.Cameras[#Config.Cameras + 1] = cameraData
+    debugPrint('Camera added: ' .. tostring(cameraData.name))
+    return true, 'Camera added successfully'
 end
 
 local function removeCamera(cameraId)
-    for i, camera in ipairs(config.Cameras) do
+    for i, camera in ipairs(Config.Cameras) do
         if camera.id == cameraId then
-            table.remove(config.Cameras, i)
-            
-            if CamerasInitialized then
-                RefreshCameraSystem()
-            end
-            
-            print("Camera removed: ID " .. cameraId)
-            return true, "Camera removed successfully"
+            table.remove(Config.Cameras, i)
+            debugPrint('Camera removed: ID ' .. tostring(cameraId))
+            return true, 'Camera removed successfully'
         end
     end
-    
-    print("Failed to remove camera: ID " .. cameraId .. " not found")
-    return false, "Camera ID not found"
-end
-
-local function getAllCameras()
-    return config.Cameras
+    return false, 'Camera ID not found'
 end
 
 local function getCameraById(cameraId)
-    for _, camera in ipairs(config.Cameras) do
-        if camera.id == cameraId then
-            return camera
-        end
+    for _, camera in ipairs(Config.Cameras) do
+        if camera.id == cameraId then return camera end
     end
     return nil
 end
 
+SecCam.GetCameraById = getCameraById
+
 exports('AddCamera', addCamera)
 exports('RemoveCamera', removeCamera)
-exports('GetAllCameras', getAllCameras)
+exports('GetAllCameras', function() return Config.Cameras end)
 exports('GetCameraById', getCameraById)
-
-
-
--- LUMAA - Thank you Dexter <3 xx
-
-function RefreshCameraSystem()
-    TriggerClientEvent('security:refreshCameras', -1, config.Cameras)
-end
-
--- set initialization flag once cameras are fully loaded
-RegisterNetEvent('security:camerasInitialized')
-AddEventHandler('security:camerasInitialized', function()
-    CamerasInitialized = true
-    print("Camera system initialized")
-end)
-
--- Example of how to handle camera synchronization for players joining
-
--- RegisterNetEvent('security:requestCameras')
--- AddEventHandler('security:requestCameras', function()
---     local source = source
---     TriggerClientEvent('security:receiveCameras', source, config.Cameras)
--- end)
-
--- local newCamera = {
---     id = 99,                                      -- Unique ID for the camera
---     name = "Security Entrance",                                  -- Camera name
---     location = "Diamond Casino & Resort",                        -- Location
---     position = vector3(983.1218, 8.3902, 80.9837),          -- Position
---     rotation = vector3(-10.0, 0.0, 25.0),                        -- Rotation
---     rotationLimits = {
---         x = {min = -75.0, max = -5},                            
---         z = {min = 89, max = 175.0}                             
---     },
---     interactiveProps = {
---         {
---             propUniqueId = "security_mainframe",                
---             position = vector3(2509.0986, -260.3841, -54.0064), 
---             hash = -1498975473,                                  
---             interactionText = "Disable the Door Locks",          
---             successText = "Security system bypassed",            
---             failText = "Security alert triggered",               
---             highlightColor = {r = 0, g = 255, b = 0, a = 200},   
-            
---             hackExport = "glitch-minigames:StartSurgeOverride", 
---             hackParams = {                                      
---                 keys = {'E', 'F'},
---                 requiredPresses = 30,
---                 decayRate = 2
---             },
---         }
---     }
--- }
-
-
--- RegisterCommand('tcam', function(source, args, rawCommand)
---     --exports['glitch-securityCameras']:AddCamera(newCamera)
---     Citizen.Wait(50)
---     exports['glitch-securityCameras']:AttemptCameraHack(1, "security_mainframe", {1,2,3,4,5,})
--- end, false)
