@@ -20,6 +20,8 @@ Works on any framework. It needs ox_lib and nothing else. The default hack minig
 
 [Features](#features) &middot; [What you need](#what-you-need) &middot; [Install](#install) &middot; [Configuration](#configuration) &middot; [Exports](#exports) &middot; [How it works](#how-it-works) &middot; [Troubleshooting](#troubleshooting)
 
+<img src="media/demo.gif" alt="Security Cameras in the city" width="100%">
+
 </div>
 
 ---
